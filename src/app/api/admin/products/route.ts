@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import slugify from 'slugify';
+
+async function isAdmin() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === 'admin';
+}
+
+// GET /api/admin/products - Lista todos los productos con filtros
+export async function GET(req: NextRequest) {
+  if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '20');
+  const search = searchParams.get('search') || '';
+  const categoryId = searchParams.get('categoryId');
+  const brandId = searchParams.get('brandId');
+  const active = searchParams.get('active');
+  const featured = searchParams.get('featured');
+
+  const where: Record<string, unknown> = {};
+  if (search) where.OR = [
+    { name: { contains: search } },
+    { sku: { contains: search } },
+    { barcode: { contains: search } },
+  ];
+  if (categoryId) where.categoryId = categoryId;
+  if (brandId) where.brandId = brandId;
+  if (active !== null && active !== undefined && active !== '') where.active = active === 'true';
+  if (featured === 'true') where.featured = true;
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      include: { category: true, brand: true, type: true },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return NextResponse.json({ products, total, page, pages: Math.ceil(total / limit) });
+}
+
+// POST /api/admin/products - Crear producto
+export async function POST(req: NextRequest) {
+  if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const slug = slugify(body.name, { lower: true, strict: true });
+
+    const product = await prisma.product.create({
+      data: {
+        name: body.name,
+        slug,
+        description: body.description || null,
+        shortDesc: body.shortDesc || null,
+        sku: body.sku,
+        barcode: body.barcode || null,
+        price: parseFloat(body.price),
+        comparePrice: body.comparePrice ? parseFloat(body.comparePrice) : null,
+        cost: body.cost ? parseFloat(body.cost) : null,
+        stock: parseInt(body.stock || '0'),
+        minStock: parseInt(body.minStock || '0'),
+        images: body.images || '[]',
+        featured: body.featured || false,
+        active: body.active !== false,
+        isNew: body.isNew || false,
+        categoryId: body.categoryId,
+        brandId: body.brandId || null,
+        typeId: body.typeId || null,
+        specs: body.specs || null,
+        weight: body.weight ? parseFloat(body.weight) : null,
+        dimensions: body.dimensions || null,
+        warranty: body.warranty || null,
+        tags: body.tags || null,
+      },
+    });
+
+    // Registrar movimiento de stock
+    if (parseInt(body.stock || '0') > 0) {
+      await prisma.stockMovement.create({
+        data: {
+          productId: product.id,
+          type: 'in',
+          quantity: parseInt(body.stock),
+          reason: 'importacion',
+          reference: 'Creación de producto',
+        },
+      });
+    }
+
+    return NextResponse.json(product, { status: 201 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error al crear producto';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
