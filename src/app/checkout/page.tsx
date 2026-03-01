@@ -43,6 +43,27 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
+  // Pre-fill form from logged-in user's profile + default address
+  useEffect(() => {
+    if (!session) return;
+    Promise.all([
+      fetch('/api/user/profile').then(r => r.ok ? r.json() : null),
+      fetch('/api/user/addresses').then(r => r.ok ? r.json() : []),
+    ]).then(([profile, addresses]) => {
+      const defaultAddr = Array.isArray(addresses)
+        ? (addresses.find((a: { isDefault: boolean }) => a.isDefault) ?? addresses[0])
+        : null;
+      setForm(prev => ({
+        ...prev,
+        name: profile?.name || prev.name,
+        email: session.user?.email || prev.email,
+        phone: profile?.phone || prev.phone,
+        address: defaultAddr?.address || profile?.address || prev.address,
+        city: defaultAddr?.city || profile?.city || prev.city,
+      }));
+    }).catch(() => {});
+  }, [session]);
+
   if (items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">

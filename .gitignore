@@ -40,6 +40,9 @@ prisma/dev.db-journal
 # scraped site data
 www.cdrmedios.com/
 
+# user uploads
+/upload/
+
 # temp/generated scripts
 _gen.js
 fix-css.js
