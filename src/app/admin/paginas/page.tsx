@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
@@ -58,6 +58,13 @@ export default function AdminPaginasPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'contenido' | 'seo'>('contenido')
 
+  // Product search / insert
+  const [showProductSearch, setShowProductSearch] = useState(false)
+  const [productQuery, setProductQuery] = useState('')
+  const [productResults, setProductResults] = useState<{ id: string; name: string; slug: string; sku: string }[]>([])
+  const [searchingProducts, setSearchingProducts] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login')
     if (status === 'authenticated' && session?.user?.role !== 'admin') router.push('/')
@@ -77,6 +84,49 @@ export default function AdminPaginasPage() {
   function showToast(msg: string, type: 'ok' | 'err' = 'ok') {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
+  }
+
+  const searchProducts = useCallback(async (q: string) => {
+    if (!q.trim()) { setProductResults([]); return }
+    setSearchingProducts(true)
+    try {
+      const res = await fetch(`/api/admin/products?search=${encodeURIComponent(q)}&limit=8`)
+      if (res.ok) {
+        const data = await res.json()
+        setProductResults((data.products ?? data).slice(0, 8))
+      }
+    } finally {
+      setSearchingProducts(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => searchProducts(productQuery), 300)
+    return () => clearTimeout(t)
+  }, [productQuery, searchProducts])
+
+  function insertShortcode(slug: string) {
+    const shortcode = `[producto slug="${slug}"]`
+    const ta = textareaRef.current
+    if (ta) {
+      const start = ta.selectionStart ?? form.content.length
+      const end = ta.selectionEnd ?? start
+      const before = form.content.slice(0, start)
+      const after = form.content.slice(end)
+      const newContent = before + shortcode + after
+      setForm(f => ({ ...f, content: newContent }))
+      // Restore focus + cursor after React re-renders
+      setTimeout(() => {
+        ta.focus()
+        const pos = start + shortcode.length
+        ta.setSelectionRange(pos, pos)
+      }, 0)
+    } else {
+      setForm(f => ({ ...f, content: f.content + shortcode }))
+    }
+    setShowProductSearch(false)
+    setProductQuery('')
+    setProductResults([])
   }
 
   function openNew() {
@@ -415,7 +465,60 @@ export default function AdminPaginasPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Contenido (HTML)
                     </label>
+
+                    {/* Toolbar de inserción */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => { setShowProductSearch(v => !v); setProductQuery(''); setProductResults([]) }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-orange-50 border border-orange-200 text-orange-700 rounded-lg hover:bg-orange-100 font-medium"
+                      >
+                        📦 Insertar producto
+                      </button>
+                    </div>
+
+                    {/* Panel búsqueda de producto */}
+                    {showProductSearch && (
+                      <div className="mb-2 border border-orange-200 rounded-lg bg-orange-50 p-3 space-y-2">
+                        <p className="text-xs text-orange-700 font-medium">Buscar producto para insertar como shortcode:</p>
+                        <input
+                          type="text"
+                          autoFocus
+                          value={productQuery}
+                          onChange={e => setProductQuery(e.target.value)}
+                          placeholder="Nombre, SKU o slug del producto..."
+                          className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                        />
+                        {searchingProducts && (
+                          <p className="text-xs text-orange-500">Buscando...</p>
+                        )}
+                        {!searchingProducts && productQuery && productResults.length === 0 && (
+                          <p className="text-xs text-orange-500">No se encontraron productos.</p>
+                        )}
+                        {productResults.length > 0 && (
+                          <ul className="divide-y divide-orange-100 border border-orange-200 rounded-lg bg-white overflow-hidden">
+                            {productResults.map(p => (
+                              <li key={p.id}>
+                                <button
+                                  type="button"
+                                  onClick={() => insertShortcode(p.slug)}
+                                  className="w-full text-left px-3 py-2 hover:bg-orange-50 flex items-center justify-between gap-3"
+                                >
+                                  <span className="text-sm font-medium text-gray-800 truncate">{p.name}</span>
+                                  <span className="text-xs text-gray-400 shrink-0 font-mono">{p.sku}</span>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {!productQuery && (
+                          <p className="text-xs text-orange-600 italic">Escribe para buscar un producto...</p>
+                        )}
+                      </div>
+                    )}
+
                     <textarea
+                      ref={textareaRef}
                       value={form.content}
                       onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
                       rows={22}
@@ -424,6 +527,7 @@ export default function AdminPaginasPage() {
                     />
                     <p className="text-xs text-gray-400 mt-1">
                       Puedes usar etiquetas HTML: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;strong&gt;, &lt;a href=&quot;...&quot;&gt;, &lt;br&gt;, etc.
+                      También shortcodes: <span className="font-mono">[producto slug=&quot;mi-producto&quot;]</span> · <span className="font-mono">[productos categoria=&quot;notebooks&quot; limit=&quot;4&quot;]</span>
                     </p>
                   </div>
                 </div>
@@ -554,6 +658,21 @@ export default function AdminPaginasPage() {
                   <p>&lt;a href=&quot;/&quot;&gt;Link&lt;/a&gt;</p>
                   <p>&lt;br&gt; (salto de línea)</p>
                   <p>&lt;hr&gt; (línea divisoria)</p>
+                </div>
+              </div>
+
+              {/* Ayuda shortcodes */}
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-xs text-orange-800">
+                <p className="font-semibold mb-2">📦 Shortcodes de productos</p>
+                <div className="space-y-1.5 font-mono text-orange-700">
+                  <p>[producto slug=&quot;mi-producto&quot;]</p>
+                  <p className="text-orange-500 not-italic font-sans">— Un producto por slug</p>
+                  <p>[productos categoria=&quot;notebooks&quot; limit=&quot;4&quot;]</p>
+                  <p className="text-orange-500 not-italic font-sans">— Lista por categoría</p>
+                  <p>[productos marca=&quot;logitech&quot; limit=&quot;8&quot;]</p>
+                  <p className="text-orange-500 not-italic font-sans">— Lista por marca</p>
+                  <p>[productos destacados=&quot;true&quot; limit=&quot;4&quot;]</p>
+                  <p className="text-orange-500 not-italic font-sans">— Productos destacados</p>
                 </div>
               </div>
             </div>
