@@ -46,7 +46,7 @@ export default async function PagePublica({ params }: Props) {
       {/* Contenido */}
       <div className="max-w-4xl mx-auto px-4 py-10">
         <div className="bg-white rounded-xl border border-gray-200 p-8">
-          <ShortcodeRenderer html={page.content} />
+          <ShortcodeRenderer html={page.content ?? ''} />
         </div>
       </div>
     </div>

@@ -308,3 +308,13 @@ model Page {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ==================== BACKUP DE PRECIOS ====================
+
+model PriceBackup {
+  id        String   @id @default(cuid())
+  label     String
+  data      String   // JSON con array de { id, price, comparePrice, cost }
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+}
