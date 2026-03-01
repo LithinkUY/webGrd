@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { useCart, CartProduct } from '@/store/cart';
 import toast from 'react-hot-toast';
@@ -28,6 +29,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const addItem = useCart((s) => s.addItem);
   const [qty, setQty] = useState(1);
+  const router = useRouter();
 
   let images: string[] = [];
   try { images = JSON.parse(product.images || '[]'); } catch {}
@@ -53,6 +55,23 @@ export default function ProductCard({ product }: ProductCardProps) {
     for (let i = 0; i < qty; i++) addItem(cartProduct);
     toast.success(`${qty > 1 ? qty + 'x ' : ''}Agregado al carrito`);
     setQty(1);
+  };
+
+  const handleBuy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (product.stock <= 0) return;
+    const cartProduct: CartProduct = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      image: mainImage || '',
+      sku: product.sku,
+      stock: product.stock,
+    };
+    for (let i = 0; i < qty; i++) addItem(cartProduct);
+    router.push('/checkout');
   };
 
   const incQty = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setQty(q => Math.min(q + 1, product.stock || 99)); };
@@ -119,34 +138,43 @@ export default function ProductCard({ product }: ProductCardProps) {
             )}
           </div>
 
-          {/* Qty + Comprar */}
+          {/* Qty + Botones */}
           {product.stock > 0 && product.price > 0 ? (
-            <div className="flex items-center justify-center gap-2">
+            <div className="space-y-1.5">
               {/* Selector de cantidad */}
-              <div className="flex items-center border border-gray-200 rounded overflow-hidden">
-                <button
-                  onClick={decQty}
-                  className="w-6 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-sm leading-none"
-                >−</button>
-                <span className="w-7 text-center text-[12px] font-medium">{qty}</span>
-                <div className="flex flex-col">
-                  <button
-                    onClick={incQty}
-                    className="w-4 h-3.5 flex items-center justify-center text-gray-400 hover:bg-gray-100 text-[9px] leading-none border-b border-gray-200"
-                  >▲</button>
+              <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center border border-gray-200 rounded overflow-hidden">
                   <button
                     onClick={decQty}
-                    className="w-4 h-3.5 flex items-center justify-center text-gray-400 hover:bg-gray-100 text-[9px] leading-none"
-                  >▼</button>
+                    className="w-6 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-sm leading-none"
+                  >−</button>
+                  <span className="w-7 text-center text-[12px] font-medium">{qty}</span>
+                  <div className="flex flex-col">
+                    <button
+                      onClick={incQty}
+                      className="w-4 h-3.5 flex items-center justify-center text-gray-400 hover:bg-gray-100 text-[9px] leading-none border-b border-gray-200"
+                    >▲</button>
+                    <button
+                      onClick={decQty}
+                      className="w-4 h-3.5 flex items-center justify-center text-gray-400 hover:bg-gray-100 text-[9px] leading-none"
+                    >▼</button>
+                  </div>
                 </div>
+                {/* Botón agregar al carrito */}
+                <button
+                  onClick={handleAddToCart}
+                  title="Agregar al carrito"
+                  className="flex items-center justify-center w-8 h-7 border border-[#e8850c] text-[#e8850c] rounded hover:bg-[#e8850c] hover:text-white transition-colors"
+                >
+                  <ShoppingCartIcon className="h-4 w-4" />
+                </button>
               </div>
-              {/* Botón comprar */}
+              {/* Botón Comprar — va directo al checkout */}
               <button
-                onClick={handleAddToCart}
-                className="flex items-center justify-center gap-1.5 bg-[#e8850c] text-white text-[11px] font-bold py-1.5 px-4 rounded hover:bg-[#d47a0b] transition-colors"
+                onClick={handleBuy}
+                className="w-full flex items-center justify-center gap-1.5 bg-[#e8850c] text-white text-[11px] font-bold py-1.5 px-4 rounded hover:bg-[#d47a0b] transition-colors"
               >
-                <ShoppingCartIcon className="h-3.5 w-3.5 shrink-0" />
-                <span>Comprar</span>
+                <span>🛒 Comprar ahora</span>
               </button>
             </div>
           ) : (

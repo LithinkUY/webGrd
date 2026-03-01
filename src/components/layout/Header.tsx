@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import {
@@ -35,7 +36,27 @@ export default function Header() {
   const totalItems = useCart((s) => s.totalItems);
   const totalPrice = useCart((s) => s.totalPrice);
 
-  useEffect(() => { setMounted(true); }, []);
+  // Settings de apariencia
+  const [logoText, setLogoText] = useState('ImpoTech');
+  const [logoAccent, setLogoAccent] = useState('Impo');
+  const [logoColor, setLogoColor] = useState('#e8850c');
+  const [logoImageUrl, setLogoImageUrl] = useState('');
+  const [colorSecondary, setColorSecondary] = useState('#333333');
+
+  useEffect(() => {
+    setMounted(true);
+    // Cargar settings de apariencia
+    fetch('/api/public/settings?keys=logo_text,logo_accent,logo_color,logo_image_url,color_secondary')
+      .then(r => r.json())
+      .then((data: Record<string, string>) => {
+        if (data.logo_text) setLogoText(data.logo_text);
+        if (data.logo_accent) setLogoAccent(data.logo_accent);
+        if (data.logo_color) setLogoColor(data.logo_color);
+        if (data.logo_image_url) setLogoImageUrl(data.logo_image_url);
+        if (data.color_secondary) setColorSecondary(data.color_secondary);
+      })
+      .catch(() => {});
+  }, []);
 
   // Evitar mismatch de hydration: en SSR siempre mostramos 0
   const cartCount = mounted ? totalItems() : 0;
@@ -43,14 +64,26 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Main header bar — ImpoTech style: dark bg, logo | search | user+cart */}
-      <div className="bg-[#333333]">
+      {/* Main header bar */}
+      <div style={{ backgroundColor: colorSecondary }}>
         <div className="container mx-auto px-4 flex items-center justify-between h-[56px] gap-4">
-          {/* Logo — ImpoTech block style */}
+          {/* Logo dinámico */}
           <Link href="/" className="flex-shrink-0">
-            <div className="text-2xl font-black text-white tracking-tight leading-none" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
-              <span className="text-[#e8850c]">Impo</span>Tech
-            </div>
+            {logoImageUrl ? (
+              <Image
+                src={logoImageUrl}
+                alt={logoText}
+                width={140}
+                height={40}
+                className="object-contain max-h-[40px] w-auto"
+                unoptimized
+              />
+            ) : (
+              <div className="text-2xl font-black text-white tracking-tight leading-none" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
+                <span style={{ color: logoColor }}>{logoAccent}</span>
+                {logoText.slice(logoAccent.length)}
+              </div>
+            )}
           </Link>
 
           {/* AJAX Search bar — Mercado Libre style */}

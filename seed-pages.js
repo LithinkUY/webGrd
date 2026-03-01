@@ -204,7 +204,7 @@ async function main() {
         title: page.title,
         content: page.content,
         published: true,
-        showInMenu: page.showInFooter || false,
+        showInFooter: page.showInFooter,
       },
     })
     console.log(`  + Creada: ${page.slug}`)

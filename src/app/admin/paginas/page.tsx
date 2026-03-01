@@ -8,7 +8,7 @@ interface Page {
   slug: string
   title: string
   published: boolean
-  showInMenu: boolean
+  showInFooter: boolean
   createdAt: string
   updatedAt: string
 }
@@ -21,7 +21,7 @@ interface PageForm {
   metaTitle: string
   metaDesc: string
   published: boolean
-  showInMenu: boolean
+  showInFooter: boolean
 }
 
 const emptyForm: PageForm = {
@@ -31,7 +31,7 @@ const emptyForm: PageForm = {
   metaTitle: '',
   metaDesc: '',
   published: true,
-  showInMenu: false,
+  showInFooter: false,
 }
 
 function slugify(text: string) {
@@ -98,7 +98,7 @@ export default function AdminPaginasPage() {
         metaTitle: data.metaTitle || '',
         metaDesc: data.metaDesc || '',
         published: data.published,
-        showInMenu: page.showInMenu,
+        showInFooter: page.showInFooter,
       })
     } else {
       setForm({
@@ -109,7 +109,7 @@ export default function AdminPaginasPage() {
         metaTitle: '',
         metaDesc: '',
         published: page.published,
-        showInMenu: page.showInMenu,
+        showInFooter: page.showInFooter,
       })
     }
     setActiveTab('contenido')
@@ -152,7 +152,7 @@ export default function AdminPaginasPage() {
     fetchPages()
   }
 
-  async function toggleField(page: Page, field: 'published' | 'showInMenu') {
+  async function toggleField(page: Page, field: 'published' | 'showInFooter') {
     const res = await fetch('/api/admin/pages', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -284,14 +284,14 @@ export default function AdminPaginasPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button
-                          onClick={() => toggleField(page, 'showInMenu')}
+                          onClick={() => toggleField(page, 'showInFooter')}
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                            page.showInMenu
+                            page.showInFooter
                               ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                               : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                           }`}
                         >
-                          {page.showInMenu ? '✓ Sí' : '✗ No'}
+                          {page.showInFooter ? '✓ Sí' : '✗ No'}
                         </button>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">
@@ -524,18 +524,18 @@ export default function AdminPaginasPage() {
 
                 <div className="flex items-center justify-between py-2 border-t border-gray-100">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Mostrar en Menú</p>
+                    <p className="text-sm font-medium text-gray-700">Mostrar en Footer</p>
                     <p className="text-xs text-gray-400">Aparece en el pie del sitio</p>
                   </div>
                   <button
-                    onClick={() => setForm(f => ({ ...f, showInMenu: !f.showInMenu }))}
+                    onClick={() => setForm(f => ({ ...f, showInFooter: !f.showInFooter }))}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      form.showInMenu ? 'bg-blue-500' : 'bg-gray-300'
+                      form.showInFooter ? 'bg-blue-500' : 'bg-gray-300'
                     }`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow ${
-                        form.showInMenu ? 'translate-x-6' : 'translate-x-1'
+                        form.showInFooter ? 'translate-x-6' : 'translate-x-1'
                       }`}
                     />
                   </button>

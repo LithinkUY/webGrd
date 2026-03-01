@@ -113,39 +113,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No se encontraron productos para actualizar' }, { status: 404 });
   }
 
-  // ── Crear backup automático ANTES de cambiar ──
-  const actionLabels: Record<string, string> = {
-    markup_from_cost: `Margen sobre costo +${percentage || 0}%`,
-    increase: `Aumento +${percentage || 0}%`,
-    decrease: `Reducción -${percentage || 0}%`,
-    set_compare: `Oferta -${percentage || 0}%`,
-    clear_compare: 'Quitar precio oferta',
-  };
-  try {
-    const backupData = products.map(p => ({
-      id: p.id,
-      price: p.price,
-      comparePrice: p.comparePrice,
-      cost: p.cost,
-    }));
-    await prisma.priceBackup.create({
-      data: {
-        label: (actionLabels[action] || action) + ` (${products.length} productos)`,
-        data: JSON.stringify(backupData),
-        count: products.length,
-      },
-    });
-    // Limpiar backups viejos (mantener solo los últimos 10)
-    const allBackups = await prisma.priceBackup.findMany({ orderBy: { createdAt: 'desc' }, select: { id: true } });
-    if (allBackups.length > 10) {
-      const toDelete = allBackups.slice(10).map(b => b.id);
-      await prisma.priceBackup.deleteMany({ where: { id: { in: toDelete } } });
-    }
-  } catch (e) {
-    console.error('Error creando backup de precios:', e);
-    // No frenamos el proceso si el backup falla
-  }
-
   let updated = 0;
 
   for (const product of products) {

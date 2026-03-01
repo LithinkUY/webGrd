@@ -2,7 +2,10 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import Link from 'next/link';
+import { ChevronLeftIcon, ChevronRightIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
+import { useCart, CartProduct } from '@/store/cart';
+import toast from 'react-hot-toast';
 
 interface Product {
   sku: string;
@@ -10,6 +13,7 @@ interface Product {
   price: number;
   image: string;
   brand: string;
+  slug?: string;
 }
 
 const sections: { title: string; products: Product[] }[] = [
@@ -70,11 +74,28 @@ const sections: { title: string; products: Product[] }[] = [
 
 function CarouselSection({ title, products }: { title: string; products: Product[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const addItem = useCart((s) => s.addItem);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
     const amount = scrollRef.current.offsetWidth * 0.8;
     scrollRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
+
+  const handleBuy = (e: React.MouseEvent, p: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cartProduct: CartProduct = {
+      id: p.sku,
+      name: p.name,
+      slug: p.slug || p.sku.toLowerCase(),
+      price: p.price,
+      image: p.image,
+      sku: p.sku,
+      stock: 99,
+    };
+    addItem(cartProduct);
+    toast.success('Agregado al carrito');
   };
 
   return (
@@ -93,12 +114,14 @@ function CarouselSection({ title, products }: { title: string; products: Product
       <div ref={scrollRef} className="product-carousel flex gap-3 overflow-x-auto scroll-smooth pb-2" style={{ scrollbarWidth: 'none' }}>
         {products.map((p) => (
           <div key={p.sku} className="flex-shrink-0 w-[calc((100%-3*0.75rem)/4)] min-w-[180px] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-3 flex flex-col">
-            <div className="relative aspect-[4/3] mb-2">
-              <Image src={p.image} alt={p.name} fill className="object-contain" sizes="220px" />
-            </div>
-            <span className="text-[10px] text-gray-400 uppercase">{p.brand}</span>
-            <h3 className="text-[12px] text-gray-700 leading-tight line-clamp-2 min-h-[32px] mb-1">{p.name}</h3>
-            <span className="text-[10px] text-gray-400 mb-1">{p.sku}</span>
+            <Link href={p.slug ? `/productos/${p.slug}` : `/productos?search=${encodeURIComponent(p.sku)}`} className="block">
+              <div className="relative aspect-[4/3] mb-2">
+                <Image src={p.image} alt={p.name} fill className="object-contain" sizes="220px" />
+              </div>
+              <span className="text-[10px] text-gray-400 uppercase">{p.brand}</span>
+              <h3 className="text-[12px] text-gray-700 leading-tight line-clamp-2 min-h-[32px] mb-1">{p.name}</h3>
+              <span className="text-[10px] text-gray-400 mb-1">{p.sku}</span>
+            </Link>
             {p.price > 0 && (
               <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-[11px] text-gray-500">USD</span>
@@ -106,8 +129,12 @@ function CarouselSection({ title, products }: { title: string; products: Product
               </div>
             )}
             <div className="mt-auto flex items-center justify-between">
-              <span className="badge-stock text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">En stock</span>
-              <button className="bg-[#e8850c] hover:bg-[#d47a0b] text-white text-[11px] font-semibold px-4 py-1.5 rounded-full transition-colors">
+              <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">En stock</span>
+              <button
+                onClick={(e) => handleBuy(e, p)}
+                className="flex items-center gap-1 bg-[#e8850c] hover:bg-[#d47a0b] text-white text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
+              >
+                <ShoppingCartIcon className="h-3 w-3" />
                 Comprar
               </button>
             </div>

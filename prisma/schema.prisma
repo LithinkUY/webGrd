@@ -281,34 +281,6 @@ model SiteSetting {
   value String
 }
 
-// ==================== PÁGINAS CMS ====================
-
-model Page {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  content     String   @default("")
-  metaTitle   String?
-  metaDesc    String?
-  published   Boolean  @default(false)
-  sortOrder   Int      @default(0)
-  template    String   @default("default")
-  showInMenu  Boolean  @default(false)
-  menuLabel   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ==================== BACKUP DE PRECIOS ====================
-
-model PriceBackup {
-  id        String   @id @default(cuid())
-  label     String   // Descripción del cambio que se hizo
-  data      String   // JSON: [{id, price, comparePrice, cost}, ...]
-  count     Int      // Cantidad de productos respaldados
-  createdAt DateTime @default(now())
-}
-
 model PaymentConfig {
   id            String  @id @default(cuid())
   provider      String  @unique // mercadopago | stripe | etc
