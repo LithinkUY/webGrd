@@ -17,7 +17,7 @@ interface SearchResult {
   brand: string | null;
 }
 
-export default function SearchBar() {
+export default function SearchBar({ categoryFilter }: { categoryFilter?: string }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +45,8 @@ export default function SearchBar() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}`);
+      const cat = categoryFilter ? `&category=${encodeURIComponent(categoryFilter)}` : '';
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}${cat}`);
       if (res.ok) {
         const data = await res.json();
         setResults(data);
@@ -103,8 +104,8 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="relative flex-1 max-w-2xl" ref={containerRef}>
-      <div className="flex w-full h-[38px] rounded-full overflow-hidden shadow-sm">
+    <div className="relative w-full" ref={containerRef}>
+      <div className="flex w-full h-[38px]">
         <div className="relative flex-1">
           <input
             ref={inputRef}
@@ -114,7 +115,7 @@ export default function SearchBar() {
             onKeyDown={handleKeyDown}
             onFocus={() => { if (results.length > 0) setOpen(true); }}
             placeholder="Buscar productos, marcas y más..."
-            className="w-full h-full bg-white text-gray-800 pl-4 pr-10 text-[14px] focus:outline-none placeholder-gray-400 border border-r-0 border-[#ddd] rounded-l-full"
+            className="w-full h-full bg-white text-gray-800 pl-4 pr-10 text-[13px] focus:outline-none placeholder-gray-400"
           />
           {loading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -125,7 +126,7 @@ export default function SearchBar() {
         <button
           type="button"
           onClick={handleFullSearch}
-          className="bg-[#e8850c] text-white px-5 rounded-r-full hover:bg-[#d47a0b] transition-colors flex items-center"
+          className="bg-[#e8850c] text-white px-4 hover:bg-[#d47a0b] transition-colors flex items-center"
         >
           <MagnifyingGlassIcon className="h-5 w-5" />
         </button>

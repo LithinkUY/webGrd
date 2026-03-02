@@ -2,10 +2,7 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
-import { ChevronLeftIcon, ChevronRightIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
-import { useCart, CartProduct } from '@/store/cart';
-import toast from 'react-hot-toast';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 interface Product {
   sku: string;
@@ -13,7 +10,6 @@ interface Product {
   price: number;
   image: string;
   brand: string;
-  slug?: string;
 }
 
 const sections: { title: string; products: Product[] }[] = [
@@ -74,7 +70,6 @@ const sections: { title: string; products: Product[] }[] = [
 
 function CarouselSection({ title, products }: { title: string; products: Product[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const addItem = useCart((s) => s.addItem);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -82,59 +77,50 @@ function CarouselSection({ title, products }: { title: string; products: Product
     scrollRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
   };
 
-  const handleBuy = (e: React.MouseEvent, p: Product) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const cartProduct: CartProduct = {
-      id: p.sku,
-      name: p.name,
-      slug: p.slug || p.sku.toLowerCase(),
-      price: p.price,
-      image: p.image,
-      sku: p.sku,
-      stock: 99,
-    };
-    addItem(cartProduct);
-    toast.success('Agregado al carrito');
-  };
-
   return (
-    <section className="mb-6">
-      <div className="section-title-bar flex items-center justify-between mb-3 bg-[#333] text-white px-4 py-2 rounded-md">
-        <h2 className="text-[15px] font-semibold tracking-wide">{title}</h2>
-        <div className="flex gap-1">
-          <button onClick={() => scroll('left')} className="p-1 hover:bg-white/20 rounded transition-colors">
+    <section className="mb-6 max-w-[1400px] mx-auto px-4">
+      {/* Título estilo CDR — pill oscuro con flechas */}
+      <div className="flex items-center justify-center mb-4">
+        <div className="flex items-center bg-[#3a3a3a] rounded-full overflow-hidden shadow-lg">
+          <button
+            onClick={() => scroll('left')}
+            className="px-4 py-2 text-white hover:bg-[#4a4a4a] transition-colors"
+            aria-label="Anterior"
+          >
             <ChevronLeftIcon className="w-5 h-5" />
           </button>
-          <button onClick={() => scroll('right')} className="p-1 hover:bg-white/20 rounded transition-colors">
+          <h2 className="px-6 py-2 text-white font-semibold text-[15px] whitespace-nowrap tracking-wide">
+            {title}
+          </h2>
+          <button
+            onClick={() => scroll('right')}
+            className="px-4 py-2 text-white hover:bg-[#4a4a4a] transition-colors"
+            aria-label="Siguiente"
+          >
             <ChevronRightIcon className="w-5 h-5" />
           </button>
         </div>
       </div>
-      <div ref={scrollRef} className="product-carousel flex gap-3 overflow-x-auto scroll-smooth pb-2" style={{ scrollbarWidth: 'none' }}>
+
+      {/* Carrusel */}
+      <div ref={scrollRef} className="flex gap-3 overflow-x-auto scroll-smooth pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {products.map((p) => (
-          <div key={p.sku} className="flex-shrink-0 w-[calc((100%-3*0.75rem)/4)] min-w-[180px] bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-3 flex flex-col">
-            <Link href={p.slug ? `/productos/${p.slug}` : `/productos?search=${encodeURIComponent(p.sku)}`} className="block">
-              <div className="relative aspect-[4/3] mb-2">
-                <Image src={p.image} alt={p.name} fill className="object-contain" sizes="220px" />
-              </div>
-              <span className="text-[10px] text-gray-400 uppercase">{p.brand}</span>
-              <h3 className="text-[12px] text-gray-700 leading-tight line-clamp-2 min-h-[32px] mb-1">{p.name}</h3>
-              <span className="text-[10px] text-gray-400 mb-1">{p.sku}</span>
-            </Link>
+          <div key={p.sku} className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[calc(16.666%-10px)] min-w-[160px] bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 p-3 flex flex-col">
+            <div className="relative aspect-[4/3] mb-2">
+              <Image src={p.image} alt={p.name} fill className="object-contain" sizes="200px" />
+            </div>
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">{p.brand}</span>
+            <h3 className="text-[12px] text-gray-800 leading-tight line-clamp-2 min-h-[32px] mb-1 font-medium">{p.name}</h3>
+            <span className="text-[10px] text-gray-300 font-mono mb-1">{p.sku}</span>
             {p.price > 0 && (
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-[11px] text-gray-500">USD</span>
-                <span className="text-[22px] font-bold text-gray-900 leading-none">{p.price}</span>
+                <span className="text-[11px] text-gray-400">USD</span>
+                <span className="text-[20px] font-bold text-gray-900 leading-none">{p.price}</span>
               </div>
             )}
             <div className="mt-auto flex items-center justify-between">
               <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">En stock</span>
-              <button
-                onClick={(e) => handleBuy(e, p)}
-                className="flex items-center gap-1 bg-[#e8850c] hover:bg-[#d47a0b] text-white text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors"
-              >
-                <ShoppingCartIcon className="h-3 w-3" />
+              <button className="bg-[#9e9e9e] hover:bg-[#757575] text-white text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors">
                 Comprar
               </button>
             </div>
@@ -147,7 +133,7 @@ function CarouselSection({ title, products }: { title: string; products: Product
 
 export default function FeaturedProducts() {
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="bg-[#f5f5f5] py-6">
       {sections.map((s) => (
         <CarouselSection key={s.title} title={s.title} products={s.products} />
       ))}

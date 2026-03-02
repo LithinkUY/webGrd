@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import {
   ShoppingCartIcon,
   UserIcon,
   Bars3Icon,
   XMarkIcon,
+  HeartIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { useCart } from '@/store/cart';
 import SearchBar from './SearchBar';
@@ -33,19 +35,19 @@ export default function Header() {
   const { data: session } = useSession();
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [searchCategory, setSearchCategory] = useState('all');
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const totalItems = useCart((s) => s.totalItems);
   const totalPrice = useCart((s) => s.totalPrice);
 
-  // Settings de apariencia
   const [logoText, setLogoText] = useState('ImpoTech');
   const [logoAccent, setLogoAccent] = useState('Impo');
   const [logoColor, setLogoColor] = useState('#e8850c');
   const [logoImageUrl, setLogoImageUrl] = useState('');
-  const [colorSecondary, setColorSecondary] = useState('#333333');
 
   useEffect(() => {
     setMounted(true);
-    // Cargar settings de apariencia
     fetch('/api/public/settings?keys=logo_text,logo_accent,logo_color,logo_image_url,color_secondary')
       .then(r => r.json())
       .then((data: Record<string, string>) => {
@@ -53,80 +55,131 @@ export default function Header() {
         if (data.logo_accent) setLogoAccent(data.logo_accent);
         if (data.logo_color) setLogoColor(data.logo_color);
         if (data.logo_image_url) setLogoImageUrl(data.logo_image_url);
-        if (data.color_secondary) setColorSecondary(data.color_secondary);
       })
       .catch(() => {});
   }, []);
 
-  // Evitar mismatch de hydration: en SSR siempre mostramos 0
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const cartCount = mounted ? totalItems() : 0;
   const cartTotal = mounted ? totalPrice() : 0;
 
   return (
     <header className="sticky top-0 z-50">
       {/* Main header bar */}
-      <div style={{ backgroundColor: colorSecondary }}>
-        <div className="container mx-auto px-4 flex items-center justify-between h-[56px] gap-4">
-          {/* Logo dinámico */}
+      <div className="bg-[#1a1a1a]">
+        <div className="max-w-[1400px] mx-auto px-4 flex items-center justify-between h-[60px] gap-3">
+
+          {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             {logoImageUrl ? (
-              <Image
-                src={logoImageUrl}
-                alt={logoText}
-                width={140}
-                height={40}
-                className="object-contain max-h-[40px] w-auto"
-                unoptimized
-              />
+              <Image src={logoImageUrl} alt={logoText} width={140} height={40}
+                className="object-contain max-h-[40px] w-auto" unoptimized />
             ) : (
-              <div className="text-2xl font-black text-white tracking-tight leading-none" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
+              <div className="text-2xl font-black text-white tracking-tight leading-none"
+                style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
                 <span style={{ color: logoColor }}>{logoAccent}</span>
                 {logoText.slice(logoAccent.length)}
               </div>
             )}
           </Link>
 
-          {/* AJAX Search bar — Mercado Libre style */}
+          {/* Search Bar con selector de categoría */}
           <div className="hidden md:flex flex-1 max-w-2xl">
-            <SearchBar />
+            <div className="flex w-full rounded-full overflow-hidden shadow-sm">
+              {/* Selector categoría */}
+              <div className="relative flex-shrink-0">
+                <select
+                  value={searchCategory}
+                  onChange={e => setSearchCategory(e.target.value)}
+                  className="appearance-none h-full bg-[#3a3a3a] text-white text-xs px-3 pr-7 border-r border-gray-600 cursor-pointer focus:outline-none"
+                >
+                  <option value="all">Todas las categorías</option>
+                  {searchCategories.map(c => (
+                    <option key={c.slug} value={c.slug}>{c.name}</option>
+                  ))}
+                </select>
+                <ChevronDownIcon className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none" />
+              </div>
+              {/* Input búsqueda */}
+              <div className="flex-1 bg-white">
+                <SearchBar categoryFilter={searchCategory !== 'all' ? searchCategory : undefined} />
+              </div>
+            </div>
           </div>
 
-          {/* Right side: user info + cart */}
-          <div className="hidden md:flex items-center gap-5">
-            {/* Favorites */}
-            <Link href="/favoritos" className="text-gray-400 hover:text-white transition-colors">
-              <span className="text-lg">☆</span>
+          {/* Right actions */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* Favoritos */}
+            <Link href="/favoritos" className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors text-sm">
+              <HeartIcon className="h-5 w-5" />
+              <span className="hidden lg:inline text-xs">Favoritos</span>
             </Link>
 
-            {/* User area */}
-            <div className="flex items-center gap-2 text-[13px]">
-              <UserIcon className="h-5 w-5 text-white" />
-              {session ? (
-                <div className="flex items-center gap-2">
-                  <Link href="/mi-cuenta" className="text-white font-medium hover:text-[#e8850c] transition-colors">{session.user.name}</Link>
-                  {session.user.role === 'admin' && (
-                    <Link href="/admin" className="text-[#e8850c] hover:text-white text-[11px]">Admin</Link>
+            {/* Usuario */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setUserMenuOpen(v => !v)}
+                className="flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors text-sm"
+              >
+                <UserIcon className="h-5 w-5" />
+                <span className="hidden lg:inline text-xs max-w-[80px] truncate">
+                  {session ? session.user.name : 'Ingresar'}
+                </span>
+                <ChevronDownIcon className="h-3 w-3" />
+              </button>
+              {userMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50">
+                  {session ? (
+                    <>
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{session.user.name}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{session.user.email}</p>
+                      </div>
+                      <Link href="/mi-cuenta" onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi cuenta</Link>
+                      {(session.user as any).role === 'admin' && (
+                        <Link href="/admin" onClick={() => setUserMenuOpen(false)}
+                          className="block px-4 py-2 text-sm text-[#e8850c] hover:bg-gray-50">Panel Admin</Link>
+                      )}
+                      <button onClick={() => { signOut(); setUserMenuOpen(false); }}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-50">
+                        Cerrar sesión
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/auth/login" onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Ingresar</Link>
+                      <Link href="/auth/register" onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Registrarme</Link>
+                    </>
                   )}
-                  <button onClick={() => signOut()} className="text-gray-400 hover:text-white text-[11px]">Salir</button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 text-gray-300">
-                  <Link href="/auth/login" className="hover:text-white transition-colors">Ingresar</Link>
-                  <span className="text-gray-600">|</span>
-                  <Link href="/auth/register" className="hover:text-white transition-colors">Registro</Link>
                 </div>
               )}
             </div>
 
-            {/* Cart — green badge + USD total */}
-            <Link href="/carrito" className="flex items-center gap-2 text-white">
+            {/* Carrito */}
+            <Link href="/carrito"
+              className="flex items-center gap-2 bg-[#2a2a2a] hover:bg-[#333] px-3 py-2 rounded-lg transition-colors">
               <div className="relative">
-                <ShoppingCartIcon className="h-6 w-6" />
-                <span className="absolute -top-2 -right-2.5 bg-[#1a8a7d] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center leading-none">
+                <ShoppingCartIcon className="h-5 w-5 text-white" />
+                <span className="absolute -top-2 -right-2 bg-[#00d4aa] text-black text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
                   {cartCount}
                 </span>
               </div>
-              <span className="text-[13px] font-bold text-white ml-1">USD {cartTotal.toFixed(2)}</span>
+              <div className="hidden sm:block text-right">
+                <div className="text-[10px] text-gray-400 leading-none">USD</div>
+                <div className="text-sm font-bold text-white leading-none">{cartTotal.toFixed(0)}</div>
+              </div>
             </Link>
           </div>
 
@@ -139,41 +192,46 @@ export default function Header() {
 
       {/* Mobile menu */}
       {mobileMenu && (
-        <div className="md:hidden bg-[#222] border-t border-[#333] max-h-[80vh] overflow-y-auto">
-          <div className="p-4 flex items-center gap-2 text-[13px] text-gray-400 border-b border-[#333]">
+        <div className="md:hidden bg-[#1a1a1a] border-t border-[#2a2a2a] max-h-[85vh] overflow-y-auto">
+          {/* Búsqueda mobile */}
+          <div className="p-3 border-b border-[#2a2a2a]">
+            <SearchBar />
+          </div>
+          {/* Usuario mobile */}
+          <div className="p-3 border-b border-[#2a2a2a] flex items-center gap-2 text-sm text-gray-300">
             <UserIcon className="h-4 w-4" />
             {session ? (
-              <div className="flex items-center gap-2">
-                <span className="text-white">{session.user.name}</span>
-                <button onClick={() => signOut()} className="text-gray-500 hover:text-white">Salir</button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-white font-medium">{session.user.name}</span>
+                <Link href="/mi-cuenta" className="text-gray-400 hover:text-white text-xs" onClick={() => setMobileMenu(false)}>Mi cuenta</Link>
+                {(session.user as any).role === 'admin' && (
+                  <Link href="/admin" className="text-[#e8850c] text-xs" onClick={() => setMobileMenu(false)}>Admin</Link>
+                )}
+                <button onClick={() => signOut()} className="text-red-400 hover:text-red-300 text-xs">Salir</button>
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Link href="/auth/login" className="hover:text-white" onClick={() => setMobileMenu(false)}>Ingresar</Link>
-                <span>|</span>
-                <Link href="/auth/register" className="hover:text-white" onClick={() => setMobileMenu(false)}>Registro</Link>
+                <span className="text-gray-600">|</span>
+                <Link href="/auth/register" className="hover:text-white" onClick={() => setMobileMenu(false)}>Registrarme</Link>
               </div>
             )}
           </div>
-          <div className="p-4 border-b border-[#333]">
-            <SearchBar />
-          </div>
-          <div className="p-4 flex items-center justify-between border-b border-[#333]">
-            <Link href="/carrito" className="flex items-center gap-2 text-white" onClick={() => setMobileMenu(false)}>
-              <ShoppingCartIcon className="h-5 w-5" />
-              <span className="text-sm">Mi compra</span>
-              <span className="bg-[#e8850c] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{cartCount}</span>
-              <span className="font-bold">USD {cartTotal.toFixed(0)}</span>
-            </Link>
-          </div>
-          <ul className="pb-4">
-            {searchCategories.map((cat) => (
+          {/* Carrito mobile */}
+          <Link href="/carrito" className="flex items-center gap-3 p-3 border-b border-[#2a2a2a] text-white"
+            onClick={() => setMobileMenu(false)}>
+            <ShoppingCartIcon className="h-5 w-5" />
+            <span className="text-sm flex-1">Mi compra</span>
+            <span className="bg-[#00d4aa] text-black text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{cartCount}</span>
+            <span className="font-bold text-sm">USD {cartTotal.toFixed(0)}</span>
+          </Link>
+          {/* Categorías mobile */}
+          <ul className="py-2">
+            {searchCategories.map(cat => (
               <li key={cat.slug}>
-                <Link
-                  href={`/productos?category=${cat.slug}`}
-                  className="block px-4 py-2.5 text-gray-300 hover:text-white hover:bg-[#333] text-sm"
-                  onClick={() => setMobileMenu(false)}
-                >
+                <Link href={`/productos?category=${cat.slug}`}
+                  className="block px-4 py-2.5 text-gray-300 hover:text-white hover:bg-[#2a2a2a] text-sm transition-colors"
+                  onClick={() => setMobileMenu(false)}>
                   {cat.name}
                 </Link>
               </li>

@@ -220,17 +220,44 @@ export default function AparienciaPage() {
               )}
             </div>
 
-            {/* Logo imagen */}
+            {/* Logo imagen — upload desde archivo */}
             <div className="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <label className="block text-xs font-semibold text-blue-800 mb-1">🖼️ URL de imagen del logo</label>
-              <div className="flex gap-2">
-                <input value={logoImageUrl} onChange={e => setLogoImageUrl(e.target.value)} className={inputClass}
-                  placeholder="https://... (opcional, reemplaza el logo de texto)" />
+              <label className="block text-xs font-semibold text-blue-800 mb-2">🖼️ Imagen del logo</label>
+              <div className="flex flex-col sm:flex-row gap-3 items-start">
+                {/* Input file */}
+                <label className="cursor-pointer flex items-center gap-2 bg-white border border-blue-300 hover:border-blue-500 text-blue-700 text-xs font-medium px-4 py-2 rounded-lg transition-colors">
+                  <span>📁 Seleccionar archivo</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      try {
+                        const res = await fetch('/api/admin/upload-logo', { method: 'POST', body: fd });
+                        const data = await res.json();
+                        if (data.url) {
+                          setLogoImageUrl(data.url);
+                          toast.success('Logo subido correctamente');
+                        } else {
+                          toast.error(data.error || 'Error al subir');
+                        }
+                      } catch {
+                        toast.error('Error al subir el logo');
+                      }
+                    }}
+                  />
+                </label>
                 {logoImageUrl && (
-                  <button onClick={() => setLogoImageUrl('')} className="shrink-0 text-xs text-red-500 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-50">✕ Quitar</button>
+                  <button onClick={() => setLogoImageUrl('')} className="text-xs text-red-500 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-50">
+                    ✕ Quitar logo
+                  </button>
                 )}
               </div>
-              <p className="text-[11px] text-blue-600 mt-1">Si se carga imagen, reemplaza el texto. Usá <a href="https://imgur.com" target="_blank" className="underline">Imgur</a> o Cloudinary para hostear la imagen.</p>
+              <p className="text-[11px] text-blue-600 mt-2">PNG, JPG, SVG o WEBP. Máx 2MB. Si no hay imagen, se usa el logo de texto.</p>
             </div>
 
             <p className="text-xs font-medium text-gray-500 mb-3 uppercase tracking-wide">Logo de texto (se usa si no hay imagen)</p>
@@ -524,4 +551,4 @@ export default function AparienciaPage() {
       )}
     </div>
   );
-}
+}
