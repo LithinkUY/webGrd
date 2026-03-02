@@ -40,6 +40,9 @@ prisma/dev.db-journal
 # scraped site data
 www.cdrmedios.com/
 
+# demo / prototypes (not part of Next.js build)
+nueva demo/
+
 # user uploads
 /upload/
 
