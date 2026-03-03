@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 interface Product {
@@ -105,7 +106,11 @@ function CarouselSection({ title, products }: { title: string; products: Product
       {/* Carrusel */}
       <div ref={scrollRef} className="flex gap-3 overflow-x-auto scroll-smooth pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {products.map((p) => (
-          <div key={p.sku} className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[calc(16.666%-10px)] min-w-[160px] bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 p-3 flex flex-col">
+          <Link
+            key={p.sku}
+            href={`/productos?search=${encodeURIComponent(p.sku)}`}
+            className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[calc(16.666%-10px)] min-w-[160px] bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 p-3 flex flex-col"
+          >
             <div className="relative aspect-[4/3] mb-2">
               <Image src={p.image} alt={p.name} fill className="object-contain" sizes="200px" />
             </div>
@@ -120,11 +125,11 @@ function CarouselSection({ title, products }: { title: string; products: Product
             )}
             <div className="mt-auto flex items-center justify-between">
               <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">En stock</span>
-              <button className="bg-[#9e9e9e] hover:bg-[#757575] text-white text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors">
+              <span className="bg-[#9e9e9e] hover:bg-[#757575] text-white text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors">
                 Comprar
-              </button>
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>

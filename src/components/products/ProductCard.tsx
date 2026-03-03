@@ -108,13 +108,13 @@ export default function ProductCard({ product }: ProductCardProps) {
             : <HeartIcon className="w-4 h-4 text-gray-400" />}
         </button>
 
-        <Link href={`/productos/${product.slug}`} className="block w-full h-full">
+        <Link href={`/productos/${product.slug}`} className="block w-full h-full absolute inset-0">
           {mainImage ? (
             <Image
               src={mainImage}
               alt={product.name}
               fill
-              className="object-contain p-2 transition-transform duration-300"
+              className="object-contain p-5 transition-transform duration-300"
               style={{ transform: hovered ? 'scale(1.07)' : 'scale(1)' }}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             />

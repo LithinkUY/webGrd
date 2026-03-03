@@ -190,6 +190,24 @@ export default function Header() {
         </div>
       </div>
 
+      {/* Nav bar de categorías — solo desktop */}
+      <nav className="hidden md:block bg-[#2a2a2a] border-t border-[#3a3a3a]">
+        <div className="max-w-[1400px] mx-auto px-4">
+          <ul className="flex items-center gap-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {searchCategories.map(cat => (
+              <li key={cat.slug} className="flex-shrink-0">
+                <Link
+                  href={`/productos?category=${cat.slug}`}
+                  className="block px-3 py-2 text-[12px] text-gray-300 hover:text-white hover:bg-[#3a3a3a] transition-colors whitespace-nowrap"
+                >
+                  {cat.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </nav>
+
       {/* Mobile menu */}
       {mobileMenu && (
         <div className="md:hidden bg-[#1a1a1a] border-t border-[#2a2a2a] max-h-[85vh] overflow-y-auto">

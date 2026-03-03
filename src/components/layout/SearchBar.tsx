@@ -55,7 +55,7 @@ export default function SearchBar({ categoryFilter }: { categoryFilter?: string 
       }
     } catch { /* empty */ }
     setLoading(false);
-  }, []);
+  }, [categoryFilter]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
