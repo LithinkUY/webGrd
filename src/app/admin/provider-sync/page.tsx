@@ -17,6 +17,8 @@ export default function AdminProviderSync() {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testing, setTesting] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [customDate, setCustomDate] = useState('');
   const [useFullSync, setUseFullSync] = useState(false);
@@ -43,6 +45,23 @@ export default function AdminProviderSync() {
     if (res.ok) toast.success('Configuración guardada');
     else toast.error('Error al guardar');
     setSaving(false);
+  };
+
+  const handleTestConnection = async () => {
+    if (!config.sync_url || !config.sync_email || !config.sync_token) {
+      toast.error('Completá URL, email y token antes de probar');
+      return;
+    }
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/admin/provider-sync/test', { method: 'POST' });
+      const data = await res.json();
+      setTestResult(data);
+    } catch {
+      setTestResult({ success: false, error: 'Error de red al conectar' });
+    }
+    setTesting(false);
   };
 
   const handleSync = async () => {
@@ -145,12 +164,36 @@ export default function AdminProviderSync() {
                 placeholder="Token del proveedor" />
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+            <button onClick={handleTestConnection} disabled={testing || saving}
+              className="border border-gray-300 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2">
+              {testing ? <><span className="animate-spin">⏳</span> Probando...</> : '🔌 Probar Conexión'}
+            </button>
             <button onClick={handleSaveConfig} disabled={saving}
               className="bg-gray-800 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50">
               {saving ? 'Guardando...' : '💾 Guardar Configuración'}
             </button>
           </div>
+
+          {testResult && (
+            <div className={`rounded-lg border p-4 mt-2 ${testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+              <p className={`text-sm font-semibold mb-1 ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                {testResult.success ? '✅ Conexión exitosa' : '❌ Error de conexión'}
+              </p>
+              <p className="text-sm text-gray-700">{testResult.message || testResult.error}</p>
+              {testResult.httpStatus && (
+                <p className="text-xs text-gray-400 mt-1">HTTP Status: {testResult.httpStatus}</p>
+              )}
+              {testResult.rawResponse && (
+                <details className="mt-2">
+                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">🔍 Ver respuesta raw del servidor</summary>
+                  <pre className="mt-2 text-[10px] bg-white border rounded p-2 overflow-x-auto max-h-40 overflow-y-auto text-gray-600 whitespace-pre-wrap break-all">
+                    {testResult.rawResponse}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

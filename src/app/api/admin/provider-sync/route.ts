@@ -150,6 +150,21 @@ export async function POST(req: NextRequest) {
     // Extraer el JSON del envelope SOAP de respuesta
     let productsJson: string;
 
+    // Log para debug: primeros 500 chars de la respuesta
+    console.log('[SOAP Response] Status:', response.status);
+    console.log('[SOAP Response] First 500 chars:', responseText.substring(0, 500));
+
+    // Detectar respuesta de error SOAP (faultstring)
+    const faultMatch = responseText.match(/<faultstring[^>]*>([\s\S]*?)<\/faultstring>/i);
+    if (faultMatch) {
+      throw new Error(`Error del servidor SOAP: ${faultMatch[1].trim()}`);
+    }
+
+    // Detectar respuesta vacía o HTML (redirect, login page, etc.)
+    if (!responseText.trim() || responseText.trim().startsWith('<!')) {
+      throw new Error(`Respuesta inválida del servidor (posible redirect o página de login). Respuesta: ${responseText.substring(0, 200)}`);
+    }
+
     const returnMatch = responseText.match(/<return[^>]*>([\s\S]*?)<\/return>/i)
       || responseText.match(/<productos_con_galeriaReturn[^>]*>([\s\S]*?)<\/productos_con_galeriaReturn>/i)
       || responseText.match(/<ns\d*:return[^>]*>([\s\S]*?)<\/ns\d*:return>/i);
@@ -161,7 +176,9 @@ export async function POST(req: NextRequest) {
       if (jsonMatch) {
         productsJson = jsonMatch[0];
       } else {
-        throw new Error('No se pudo extraer datos de la respuesta SOAP. Verificá email y token.');
+        // Mostrar los primeros 300 chars de la respuesta para diagnóstico
+        const preview = responseText.substring(0, 300).replace(/\n/g, ' ');
+        throw new Error(`No se pudo extraer datos de la respuesta SOAP. Verificá email y token. Respuesta recibida: "${preview}"`);
       }
     }
 
