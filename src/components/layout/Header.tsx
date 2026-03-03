@@ -16,19 +16,15 @@ import { useCart } from '@/store/cart';
 import SearchBar from './SearchBar';
 
 const searchCategories = [
-  { name: 'Audio Imagen', slug: 'audio-imagen' },
-  { name: 'Gabinetes Accesorios', slug: 'gabinetes-accesorios' },
-  { name: 'Notebook PC Tablet', slug: 'notebooks-pc-tablet' },
-  { name: 'Portabilidad', slug: 'portabilidad' },
-  { name: 'Telefonía Smartwatch', slug: 'telefonia-smartwatch' },
-  { name: 'Hardware Accesorios', slug: 'hardware-accesorios' },
-  { name: 'Gaming', slug: 'gaming' },
-  { name: 'Conectividad', slug: 'conectividad' },
-  { name: 'Impresión', slug: 'impresion' },
-  { name: 'Energía', slug: 'energia' },
-  { name: 'Hogar', slug: 'hogar' },
-  { name: 'Outlet', slug: 'outlet' },
-  { name: 'Arribados', slug: 'arribados' },
+  { name: 'Notebooks', slug: 'notebooks' },
+  { name: 'PC Escritorio', slug: 'pc-escritorio' },
+  { name: 'Componentes', slug: 'componentes' },
+  { name: 'Monitores', slug: 'monitores' },
+  { name: 'Periféricos', slug: 'perifericos' },
+  { name: 'Impresoras', slug: 'impresoras' },
+  { name: 'Redes', slug: 'redes' },
+  { name: 'Accesorios', slug: 'accesorios' },
+  { name: 'CDR Medios', slug: 'cdr-medios' },
 ];
 
 export default function Header() {
@@ -197,7 +193,7 @@ export default function Header() {
             {searchCategories.map(cat => (
               <li key={cat.slug} className="flex-shrink-0">
                 <Link
-                  href={`/productos?category=${cat.slug}`}
+                  href={`/productos?cat=${cat.slug}`}
                   className="block px-3 py-2 text-[12px] text-gray-300 hover:text-white hover:bg-[#3a3a3a] transition-colors whitespace-nowrap"
                 >
                   {cat.name}
@@ -247,7 +243,7 @@ export default function Header() {
           <ul className="py-2">
             {searchCategories.map(cat => (
               <li key={cat.slug}>
-                <Link href={`/productos?category=${cat.slug}`}
+                <Link href={`/productos?cat=${cat.slug}`}
                   className="block px-4 py-2.5 text-gray-300 hover:text-white hover:bg-[#2a2a2a] text-sm transition-colors"
                   onClick={() => setMobileMenu(false)}>
                   {cat.name}
