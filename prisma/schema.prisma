@@ -169,6 +169,8 @@ model Order {
   shippingPhone String?
   paymentMethod String?     // transferencia | mercadopago | efectivo
   paymentStatus String      @default("pending") // pending | paid | failed | refunded
+  couponId      String?
+  coupon        Coupon?     @relation(fields: [couponId], references: [id])
   trackingNumber String?
   trackingUrl   String?
   createdAt     DateTime    @default(now())
@@ -266,18 +268,20 @@ model StockMovement {
 // ==================== API EXTERNA ====================
 
 model ApiSource {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  baseUrl     String
-  apiKey      String?
-  apiSecret   String?
-  headers     String?  // JSON headers adicionales
-  active      Boolean  @default(true)
-  lastSync    DateTime?
-  syncInterval Int     @default(60) // minutos
-  mapping     String?  // JSON con mapeo de campos
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String   @unique
+  sourceType    String   @default("generic") // generic | woocommerce
+  baseUrl       String
+  apiKey        String?
+  apiSecret     String?
+  webhookSecret String?  // Secret para verificar webhooks de WooCommerce
+  headers       String?  // JSON headers adicionales
+  active        Boolean  @default(true)
+  lastSync      DateTime?
+  syncInterval  Int      @default(60) // minutos
+  mapping       String?  // JSON con mapeo de campos
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model SyncLog {
@@ -310,6 +314,26 @@ model PaymentConfig {
   config        String? // JSON config adicional
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// ==================== CUPONES ====================
+
+model Coupon {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  description   String?
+  type          String    @default("percentage") // percentage | fixed
+  value         Float     // % or fixed amount
+  minPurchase   Float?
+  maxDiscount   Float?
+  usageLimit    Int?
+  usedCount     Int       @default(0)
+  startDate     DateTime?
+  endDate       DateTime?
+  active        Boolean   @default(true)
+  orders        Order[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 // ==================== PÁGINAS CMS ====================

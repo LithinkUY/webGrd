@@ -7,7 +7,7 @@ import AIChat from '@/components/admin/AIChat';
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || (session.user as any).role !== 'admin') {
+  if (!session || session.user.role !== 'admin') {
     redirect('/auth/login');
   }
 
@@ -32,6 +32,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       title: 'Ventas',
       items: [
         { name: 'Pedidos', href: '/admin/pedidos', icon: '🛒' },
+        { name: 'Clientes', href: '/admin/clientes', icon: '👤' },
+        { name: 'Cupones', href: '/admin/cupones', icon: '🎟️' },
+        { name: 'Informes', href: '/admin/informes', icon: '📊' },
         { name: 'Pagos', href: '/admin/pagos', icon: '💳' },
         { name: 'Devoluciones', href: '/admin/devoluciones', icon: '↩️' },
       ],
@@ -39,7 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     {
       title: 'Integraciones',
       items: [
-  { name: 'API Sync', href: '/admin/cdr-sync', icon: '🔄' },
+        { name: 'Sync Proveedor', href: '/admin/provider-sync', icon: '🔄' },
         { name: 'APIs Externas', href: '/admin/api-sync', icon: '🔗' },
         { name: 'MercadoPago', href: '/admin/mercadopago', icon: '💰' },
       ],
@@ -47,16 +50,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     {
       title: 'Contenido',
       items: [
-        { name: 'Menú y Navegación', href: '/admin/menu', icon: '🧭' },
         { name: 'Páginas', href: '/admin/paginas', icon: '📄' },
+      ],
+    },
+    {
+      title: 'Personalizar',
+      items: [
+        { name: 'Menú y Navegación', href: '/admin/menu', icon: '🧭' },
+        { name: 'Apariencia', href: '/admin/apariencia', icon: '🎨' },
       ],
     },
     {
       title: 'Sistema',
       items: [
         { name: 'Usuarios', href: '/admin/usuarios', icon: '👥' },
-        { name: 'Apariencia', href: '/admin/apariencia', icon: '🎨' },
         { name: 'Configuración', href: '/admin/configuracion', icon: '⚙️' },
+        { name: 'Super Admin', href: '/admin/super-admin', icon: '🛡️' },
       ],
     },
   ];

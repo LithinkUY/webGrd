@@ -22,9 +22,11 @@ export async function POST(req: NextRequest) {
     const source = await prisma.apiSource.create({
       data: {
         name: body.name,
+        sourceType: body.sourceType || 'generic',
         baseUrl: body.baseUrl,
         apiKey: body.apiKey || null,
         apiSecret: body.apiSecret || null,
+        webhookSecret: body.webhookSecret || null,
         headers: body.headers || null,
         active: body.active !== false,
         syncInterval: body.syncInterval || 60,

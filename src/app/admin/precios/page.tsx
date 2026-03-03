@@ -113,7 +113,7 @@ export default function PreciosPage() {
     const count = productIds ? productIds.length : total;
 
     const actionLabels: Record<string, string> = {
-      markup_from_cost: 'Marcar precio = costo CDR + ' + pct + '%',
+      markup_from_cost: 'Marcar precio = costo + ' + pct + '%',
       increase: 'Aumentar precio ' + pct + '%',
       decrease: 'Reducir precio ' + pct + '%',
       set_compare: 'Crear oferta con ' + pct + '% descuento',
@@ -344,7 +344,7 @@ export default function PreciosPage() {
               onChange={(e) => setMassAction(e.target.value)}
               className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
             >
-              <option value="markup_from_cost">📈 Margen sobre costo CDR</option>
+              <option value="markup_from_cost">📈 Margen sobre costo</option>
               <option value="increase">⬆️ Aumentar precio actual %</option>
               <option value="decrease">⬇️ Reducir precio actual %</option>
               <option value="set_compare">🏷️ Crear oferta (descuento %)</option>
@@ -406,8 +406,8 @@ export default function PreciosPage() {
         {/* Nota informativa */}
         <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <p className="text-xs text-amber-800">
-            <strong>💡 Margen sobre costo CDR:</strong> Toma el precio de costo original de CDR Medios y le suma el % que indiques.
-            Ejemplo: Costo CDR = USD 100, Margen 40% → Precio venta = USD 140.
+            <strong>💡 Margen sobre costo proveedor:</strong> Toma el precio de costo original del proveedor y le suma el % que indiques.
+            Ejemplo: Costo = USD 100, Margen 40% → Precio venta = USD 140.
             {selected.size > 0 && (<span className="font-bold"> Se aplicará solo a los {selected.size} productos seleccionados.</span>)}
           </p>
         </div>
@@ -445,7 +445,7 @@ export default function PreciosPage() {
             className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-300 focus:border-orange-400"
           >
             <option value="">Todos los orígenes</option>
-            <option value="cdr">Solo CDR Medios</option>
+            <option value="api">Solo Proveedor API</option>
           </select>
           <button
             onClick={() => { setSearch(''); setCategoryId(''); setBrandId(''); setSource(''); setPage(1); }}
@@ -469,7 +469,7 @@ export default function PreciosPage() {
                 <th className="text-left p-3">Producto</th>
                 <th className="text-left p-3">SKU</th>
                 <th className="text-left p-3">Categoría</th>
-                <th className="text-right p-3">Costo CDR</th>
+                <th className="text-right p-3">Costo</th>
                 <th className="text-right p-3">Precio Venta</th>
                 <th className="text-right p-3">Precio Oferta</th>
                 <th className="text-right p-3">Margen %</th>
@@ -507,7 +507,6 @@ export default function PreciosPage() {
                     <td className="p-3 text-gray-500 font-mono text-xs">{product.sku}</td>
                     <td className="p-3 text-gray-500 text-xs">{product.category?.name || '-'}</td>
 
-                    {/* Costo CDR */}
                     <td className="p-3 text-right">
                       {isEditing ? (
                         <input type="number" step="0.01" value={editCost} onChange={(e) => setEditCost(e.target.value)}
@@ -563,8 +562,8 @@ export default function PreciosPage() {
 
                     {/* Origen */}
                     <td className="p-3 text-center">
-                      {product.sourceApi === 'cdr-medios' ? (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">CDR</span>
+                      {product.sourceApi === 'provider-api' ? (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">API</span>
                       ) : (
                         <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Manual</span>
                       )}
@@ -613,8 +612,8 @@ export default function PreciosPage() {
       {/* Leyenda */}
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border p-4">
-          <h3 className="font-semibold text-gray-800 text-sm mb-2">📈 Margen sobre costo CDR</h3>
-          <p className="text-xs text-gray-500">Toma el costo original importado de CDR Medios y calcula el precio de venta sumando el porcentaje indicado. Ideal para establecer tu margen de ganancia base.</p>
+          <h3 className="font-semibold text-gray-800 text-sm mb-2">📈 Margen sobre costo</h3>
+          <p className="text-xs text-gray-500">Toma el costo original del proveedor y calcula el precio de venta sumando el porcentaje indicado. Ideal para establecer tu margen de ganancia base.</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border p-4">
           <h3 className="font-semibold text-gray-800 text-sm mb-2">🏷️ Crear ofertas</h3>

@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // GET — listar backups
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'admin') {
+  if (!session || session.user.role !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 

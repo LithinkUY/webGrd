@@ -44,13 +44,16 @@ export default function AdminUsuarios() {
     setLoading(false);
   }, [page, search, roleFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, search, roleFilter]);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleCreate = async (e: any) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     const res = await fetch('/api/admin/users', {

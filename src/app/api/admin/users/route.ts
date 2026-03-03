@@ -73,13 +73,16 @@ export async function GET(req: NextRequest) {
     { email: { contains: search } },
   ];
   if (role) where.role = role;
+  const activeParam = searchParams.get('active');
+  if (activeParam === 'true') where.active = true;
+  if (activeParam === 'false') where.active = false;
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({
       where,
       select: {
         id: true, name: true, email: true, role: true, phone: true,
-        company: true, active: true, createdAt: true,
+        company: true, rut: true, active: true, createdAt: true,
         _count: { select: { orders: true } },
       },
       orderBy: { createdAt: 'desc' },

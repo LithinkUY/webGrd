@@ -34,20 +34,10 @@ export default async function AdminProducts({
     prisma.category.findMany({
       where: {
         parentId: null,
-        NOT: [
-          { name: { equals: 'CDR Medios' } },
-          { slug: { equals: 'cdr-medios' } },
-        ],
       },
       orderBy: { name: 'asc' },
     }),
     prisma.brand.findMany({
-      where: {
-        NOT: [
-          { name: { equals: 'CDR Medios' } },
-          { slug: { equals: 'cdr-medios' } },
-        ],
-      },
       orderBy: { name: 'asc' },
     }),
   ]);

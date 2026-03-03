@@ -80,7 +80,7 @@ function CarouselSection({ title, products }: { title: string; products: Product
 
   return (
     <section className="mb-6 max-w-[1400px] mx-auto px-4">
-      {/* Título estilo CDR — pill oscuro con flechas */}
+      {/* Título pill oscuro con flechas */}
       <div className="flex items-center justify-center mb-4">
         <div className="flex items-center bg-[#3a3a3a] rounded-full overflow-hidden shadow-lg">
           <button

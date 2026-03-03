@@ -37,8 +37,7 @@ yarn-error.log*
 prisma/dev.db
 prisma/dev.db-journal
 
-# scraped site data
-www.cdrmedios.com/
+# scraped site data (removed from repo)
 
 # demo / prototypes (not part of Next.js build)
 nueva demo/

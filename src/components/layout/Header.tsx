@@ -42,7 +42,6 @@ const fallbackCategories: MenuCategory[] = [
   { id: '6', name: 'Impresoras', slug: 'impresoras', icon: null, children: [] },
   { id: '7', name: 'Redes', slug: 'redes', icon: null, children: [] },
   { id: '8', name: 'Accesorios', slug: 'accesorios', icon: null, children: [] },
-  { id: '9', name: 'CDR Medios', slug: 'cdr-medios', icon: null, children: [] },
 ];
 
 export default function Header() {
@@ -62,18 +61,17 @@ export default function Header() {
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>(fallbackCategories);
   const [customMenuItems, setCustomMenuItems] = useState<CustomMenuItem[]>([]);
 
-  const loadMenu = useCallback(async () => {
-    try {
-      const res = await fetch('/api/public/menu');
-      const data = await res.json();
-      if (data.categories?.length) setMenuCategories(data.categories);
-      if (data.menuItems) setCustomMenuItems(data.menuItems);
-    } catch { /* keep fallback */ }
-  }, []);
-
   useEffect(() => {
     setMounted(true);
-    loadMenu();
+    const fetchMenu = async () => {
+      try {
+        const res = await fetch('/api/public/menu');
+        const data = await res.json();
+        if (data.categories?.length) setMenuCategories(data.categories);
+        if (data.menuItems) setCustomMenuItems(data.menuItems);
+      } catch { /* keep fallback */ }
+    };
+    fetchMenu();
     fetch('/api/public/settings?keys=logo_text,logo_accent,logo_color,logo_image_url,color_secondary')
       .then(r => r.json())
       .then((data: Record<string, string>) => {
@@ -83,7 +81,8 @@ export default function Header() {
         if (data.logo_image_url) setLogoImageUrl(data.logo_image_url);
       })
       .catch(() => {});
-  }, [loadMenu]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -172,7 +171,7 @@ export default function Header() {
                       </div>
                       <Link href="/mi-cuenta" onClick={() => setUserMenuOpen(false)}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi cuenta</Link>
-                      {(session.user as any).role === 'admin' && (
+                      {session.user.role === 'admin' && (
                         <Link href="/admin" onClick={() => setUserMenuOpen(false)}
                           className="block px-4 py-2 text-sm text-[#e8850c] hover:bg-gray-50">Panel Admin</Link>
                       )}
@@ -271,7 +270,7 @@ export default function Header() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-white font-medium">{session.user.name}</span>
                 <Link href="/mi-cuenta" className="text-gray-400 hover:text-white text-xs" onClick={() => setMobileMenu(false)}>Mi cuenta</Link>
-                {(session.user as any).role === 'admin' && (
+                {session.user.role === 'admin' && (
                   <Link href="/admin" className="text-[#e8850c] text-xs" onClick={() => setMobileMenu(false)}>Admin</Link>
                 )}
                 <button onClick={() => signOut()} className="text-red-400 hover:text-red-300 text-xs">Salir</button>

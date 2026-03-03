@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // GET — listar productos con info de precios
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'admin') {
+  if (!session || session.user.role !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
@@ -14,10 +14,11 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search') || '';
   const categoryId = searchParams.get('categoryId') || '';
   const brandId = searchParams.get('brandId') || '';
-  const source = searchParams.get('source') || ''; // 'cdr' para solo CDR
+  const source = searchParams.get('source') || ''; // 'api' para solo proveedor
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '50');
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
 
   if (search) {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   }
   if (categoryId) where.categoryId = categoryId;
   if (brandId) where.brandId = brandId;
-  if (source === 'cdr') where.sourceApi = 'cdr-medios';
+  if (source === 'api') where.sourceApi = 'provider-api';
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
 // POST — aplicar ajuste masivo de precios
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'admin') {
+  if (!session || session.user.role !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
@@ -93,6 +94,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Construir filtro
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
   if (productIds && productIds.length > 0) {
     where.id = { in: productIds };
@@ -100,7 +102,7 @@ export async function POST(req: NextRequest) {
     // Aplicar a todos según filtros
     if (categoryId) where.categoryId = categoryId;
     if (brandId) where.brandId = brandId;
-    if (source === 'cdr') where.sourceApi = 'cdr-medios';
+    if (source === 'api') where.sourceApi = 'provider-api';
   }
 
   // Obtener productos afectados
@@ -121,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     switch (action) {
       case 'markup_from_cost':
-        // Calcular precio de venta a partir del costo CDR + margen %
+        // Calcular precio de venta a partir del costo + margen %
         if (product.cost && product.cost > 0) {
           newPrice = Math.round(product.cost * (1 + (percentage || 0) / 100) * 100) / 100;
         }
@@ -166,7 +168,7 @@ export async function POST(req: NextRequest) {
 // PUT — editar precio individual
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'admin') {
+  if (!session || session.user.role !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
@@ -177,6 +179,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'productId requerido' }, { status: 400 });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: any = {};
   if (price !== undefined) data.price = parseFloat(price);
   if (comparePrice !== undefined) data.comparePrice = comparePrice ? parseFloat(comparePrice) : null;

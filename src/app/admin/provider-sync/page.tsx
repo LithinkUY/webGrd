@@ -9,8 +9,8 @@ interface SyncLog {
   errors: string | null; startedAt: string; finishedAt: string | null;
 }
 
-export default function AdminCdrSync() {
-  const [config, setConfig] = useState({ cdr_email: '', cdr_token: '', cdr_last_sync: '' });
+export default function AdminProviderSync() {
+  const [config, setConfig] = useState({ sync_email: '', sync_token: '', sync_url: '', sync_last_run: '' });
   const [logs, setLogs] = useState<SyncLog[]>([]);
   const [importedCount, setImportedCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ export default function AdminCdrSync() {
   const [useFullSync, setUseFullSync] = useState(false);
 
   useEffect(() => {
-    fetch('/api/admin/cdr-sync')
+    fetch('/api/admin/provider-sync')
       .then(r => r.json())
       .then(data => {
         if (data.config) setConfig(prev => ({ ...prev, ...data.config }));
@@ -35,10 +35,10 @@ export default function AdminCdrSync() {
 
   const handleSaveConfig = async () => {
     setSaving(true);
-    const res = await fetch('/api/admin/cdr-sync', {
+    const res = await fetch('/api/admin/provider-sync', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: config.cdr_email, token: config.cdr_token }),
+      body: JSON.stringify({ email: config.sync_email, token: config.sync_token, url: config.sync_url }),
     });
     if (res.ok) toast.success('Configuración guardada');
     else toast.error('Error al guardar');
@@ -46,7 +46,8 @@ export default function AdminCdrSync() {
   };
 
   const handleSync = async () => {
-    if (!config.cdr_email || !config.cdr_token) { toast.error('Configurá email y token primero'); return; }
+    if (!config.sync_url) { toast.error('Configurá la URL del web service primero'); return; }
+    if (!config.sync_email || !config.sync_token) { toast.error('Configurá email y token primero'); return; }
     setSyncing(true);
     setSyncResult(null);
     try {
@@ -55,13 +56,13 @@ export default function AdminCdrSync() {
         fecha = '2015-01-01 00:00:00';
       } else if (customDate) {
         fecha = customDate + ' 00:00:00';
-      } else if (config.cdr_last_sync) {
-        fecha = new Date(config.cdr_last_sync).toISOString().replace('T', ' ').slice(0, 19);
+      } else if (config.sync_last_run) {
+        fecha = new Date(config.sync_last_run).toISOString().replace('T', ' ').slice(0, 19);
       } else {
         fecha = '2015-01-01 00:00:00';
       }
 
-      const res = await fetch('/api/admin/cdr-sync', {
+      const res = await fetch('/api/admin/provider-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fecha }),
@@ -70,8 +71,7 @@ export default function AdminCdrSync() {
       setSyncResult(data);
       if (data.success) {
         toast.success(`Sincronización completada: ${data.synced} productos`);
-        // Recargar datos
-        const refreshRes = await fetch('/api/admin/cdr-sync');
+        const refreshRes = await fetch('/api/admin/provider-sync');
         const refreshData = await refreshRes.json();
         if (refreshData.config) setConfig(prev => ({ ...prev, ...refreshData.config }));
         if (refreshData.logs) setLogs(refreshData.logs);
@@ -79,7 +79,7 @@ export default function AdminCdrSync() {
       } else {
         toast.error(data.error || 'Error en sincronización');
       }
-    } catch (err) {
+    } catch {
       toast.error('Error de conexión');
     }
     setSyncing(false);
@@ -104,8 +104,8 @@ export default function AdminCdrSync() {
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">CDR Medios - Sincronización</h1>
-          <p className="text-sm text-gray-500 mt-1">Importar y sincronizar productos desde el catálogo de CDR Medios via SOAP</p>
+          <h1 className="text-2xl font-bold text-gray-800">Sincronización con Proveedor</h1>
+          <p className="text-sm text-gray-500 mt-1">Importar y sincronizar productos desde el catálogo del proveedor via SOAP</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
@@ -117,14 +117,21 @@ export default function AdminCdrSync() {
       {/* Configuración */}
       <div className="bg-white rounded-xl border mb-6">
         <div className="p-5 border-b">
-          <h2 className="font-bold text-gray-800 flex items-center gap-2">🔑 Credenciales API</h2>
-          <p className="text-xs text-gray-400 mt-1">Email y token proporcionados por CDR Medios para acceder al Web Service SOAP</p>
+          <h2 className="font-bold text-gray-800 flex items-center gap-2">🔑 Configuración del Proveedor</h2>
+          <p className="text-xs text-gray-400 mt-1">URL del Web Service SOAP y credenciales proporcionadas por el proveedor</p>
         </div>
         <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs text-gray-500 font-medium mb-1 block">URL del Web Service SOAP</label>
+            <input type="url" value={config.sync_url} onChange={e => setConfig({...config, sync_url: e.target.value})}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30 focus:border-[#e8850c] font-mono"
+              placeholder="https://www.proveedor.com/ws/productos/service.php?class=..." />
+            <p className="text-[10px] text-gray-400 mt-1">Ejemplo: https://dominio.com/ws/productos/service.php?class=SublimewsProductosUsuariosCompleto</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-gray-500 font-medium mb-1 block">Email del usuario</label>
-              <input type="email" value={config.cdr_email} onChange={e => setConfig({...config, cdr_email: e.target.value})}
+              <input type="email" value={config.sync_email} onChange={e => setConfig({...config, sync_email: e.target.value})}
                 className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30 focus:border-[#e8850c]"
                 placeholder="tucuenta@email.com" />
             </div>
@@ -133,16 +140,15 @@ export default function AdminCdrSync() {
                 <span>Token API</span>
                 <button onClick={() => setShowToken(!showToken)} className="text-[#e8850c] hover:underline">{showToken ? 'Ocultar' : 'Mostrar'}</button>
               </label>
-              <input type={showToken ? 'text' : 'password'} value={config.cdr_token} onChange={e => setConfig({...config, cdr_token: e.target.value})}
+              <input type={showToken ? 'text' : 'password'} value={config.sync_token} onChange={e => setConfig({...config, sync_token: e.target.value})}
                 className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30 focus:border-[#e8850c]"
-                placeholder="Token proporcionado por CDR" />
+                placeholder="Token del proveedor" />
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-400">Endpoint: <code className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">cdrmedios.com/ws/productos/service.php</code></p>
+          <div className="flex justify-end">
             <button onClick={handleSaveConfig} disabled={saving}
               className="bg-gray-800 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50">
-              {saving ? 'Guardando...' : '💾 Guardar Credenciales'}
+              {saving ? 'Guardando...' : '💾 Guardar Configuración'}
             </button>
           </div>
         </div>
@@ -152,18 +158,14 @@ export default function AdminCdrSync() {
       <div className="bg-white rounded-xl border mb-6">
         <div className="p-5 border-b">
           <h2 className="font-bold text-gray-800 flex items-center gap-2">🔄 Sincronizar Productos</h2>
-          <p className="text-xs text-gray-400 mt-1">Importar o actualizar productos desde CDR Medios. Los productos existentes se actualizan (precio, stock, imágenes).</p>
+          <p className="text-xs text-gray-400 mt-1">Importar o actualizar productos desde el proveedor. Los productos existentes se actualizan (precio, stock, imágenes).</p>
         </div>
         <div className="p-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-
-            {/* Última sync */}
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 font-medium mb-1">Última sincronización</p>
-              <p className="text-sm font-bold text-gray-700">{config.cdr_last_sync ? new Date(config.cdr_last_sync).toLocaleString('es-UY') : 'Nunca'}</p>
+              <p className="text-sm font-bold text-gray-700">{config.sync_last_run ? new Date(config.sync_last_run).toLocaleString('es-UY') : 'Nunca'}</p>
             </div>
-
-            {/* Tipo de sync */}
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 font-medium mb-1">Tipo de sincronización</p>
               <label className="flex items-center gap-2 cursor-pointer">
@@ -172,8 +174,6 @@ export default function AdminCdrSync() {
               </label>
               <p className="text-[10px] text-gray-400 mt-1">Trae TODOS los productos (primera vez)</p>
             </div>
-
-            {/* Fecha custom */}
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 font-medium mb-1">O desde fecha específica</p>
               <input type="date" value={customDate} onChange={e => { setCustomDate(e.target.value); setUseFullSync(false); }}
@@ -182,7 +182,7 @@ export default function AdminCdrSync() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button onClick={handleSync} disabled={syncing || !config.cdr_email || !config.cdr_token}
+            <button onClick={handleSync} disabled={syncing || !config.sync_url || !config.sync_email || !config.sync_token}
               className="bg-[#e8850c] text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-[#d17700] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2">
               {syncing ? (<><span className="animate-spin">⏳</span> Sincronizando...</>) : (<>🚀 Iniciar Sincronización</>)}
             </button>
@@ -262,10 +262,10 @@ export default function AdminCdrSync() {
       <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-5">
         <h3 className="font-bold text-amber-800 text-sm mb-2">ℹ️ Cómo funciona la sincronización</h3>
         <ul className="text-xs text-amber-700 space-y-1.5">
-          <li>• <strong>Primera vez:</strong> Marcá "Catálogo completo" para importar todos los productos</li>
+          <li>• <strong>Primera vez:</strong> Marcá &quot;Catálogo completo&quot; para importar todos los productos</li>
           <li>• <strong>Siguientes veces:</strong> Solo se traen productos actualizados desde la última sincronización</li>
           <li>• <strong>Productos existentes:</strong> Se actualizan precio, stock e imágenes automáticamente</li>
-          <li>• <strong>Productos nuevos:</strong> Se crean en la categoría "CDR Medios" por defecto (podés reasignarlos después)</li>
+          <li>• <strong>Productos nuevos:</strong> Se crean en la categoría por defecto (podés reasignarlos después)</li>
           <li>• <strong>Identificación:</strong> Cada producto se vincula por su código SKU del proveedor</li>
         </ul>
       </div>

@@ -101,7 +101,10 @@ export default function AparienciaPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const saveSettings = async (settings: Record<string, string>, label = 'Guardado') => {
     setSaving(true);

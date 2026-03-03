@@ -17,7 +17,7 @@ export async function GET() {
 // PUT admin — guardar métodos
 export async function PUT(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'admin') {
+  if (!session || session.user.role !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   const { methods } = await req.json();

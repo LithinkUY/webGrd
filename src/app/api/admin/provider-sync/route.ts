@@ -9,12 +9,12 @@ async function isAdmin() {
   return session?.user?.role === 'admin';
 }
 
-// GET: obtener la config de CDR Medios
+// GET: obtener la config del proveedor
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const settings = await prisma.siteSetting.findMany({
-    where: { key: { startsWith: 'cdr_' } },
+    where: { key: { startsWith: 'sync_' } },
   });
 
   const config: Record<string, string> = {};
@@ -24,29 +24,30 @@ export async function GET() {
 
   // Obtener últimas sincronizaciones
   const logs = await prisma.syncLog.findMany({
-    where: { apiSourceId: 'cdr-medios' },
+    where: { apiSourceId: 'provider-api' },
     orderBy: { startedAt: 'desc' },
     take: 20,
   });
 
-  // Contar productos importados de CDR
+  // Contar productos importados
   const importedCount = await prisma.product.count({
-    where: { sourceApi: 'cdr-medios' },
+    where: { sourceApi: 'provider-api' },
   });
 
   return NextResponse.json({ config, logs, importedCount });
 }
 
-// PUT: guardar config CDR
+// PUT: guardar config del proveedor
 export async function PUT(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const body = await req.json();
-  const { email, token } = body;
+  const { email, token, url } = body;
 
   const updates = [
-    { key: 'cdr_email', value: email || '' },
-    { key: 'cdr_token', value: token || '' },
+    { key: 'sync_email', value: email || '' },
+    { key: 'sync_token', value: token || '' },
+    { key: 'sync_url', value: url || '' },
   ];
 
   for (const u of updates) {
@@ -65,23 +66,27 @@ export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const body = await req.json();
-  const { fecha } = body; // fecha desde la cual sincronizar
+  const { fecha } = body;
 
   // Obtener credenciales
   const settings = await prisma.siteSetting.findMany({
-    where: { key: { in: ['cdr_email', 'cdr_token'] } },
+    where: { key: { in: ['sync_email', 'sync_token', 'sync_url'] } },
   });
   const config: Record<string, string> = {};
   for (const s of settings) config[s.key] = s.value;
 
-  if (!config.cdr_email || !config.cdr_token) {
-    return NextResponse.json({ error: 'Configurá email y token de CDR Medios primero' }, { status: 400 });
+  if (!config.sync_url) {
+    return NextResponse.json({ error: 'Configurá la URL del web service SOAP del proveedor primero' }, { status: 400 });
+  }
+
+  if (!config.sync_email || !config.sync_token) {
+    return NextResponse.json({ error: 'Configurá email y token del proveedor primero' }, { status: 400 });
   }
 
   // Crear log de sync
   const syncLog = await prisma.syncLog.create({
     data: {
-      apiSourceId: 'cdr-medios',
+      apiSourceId: 'provider-api',
       status: 'running',
       itemsSynced: 0,
       itemsFailed: 0,
@@ -102,15 +107,20 @@ export async function POST(req: NextRequest) {
     SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
     <SOAP-ENV:Body>
         <ns1:productos_con_galeria>
-            <email xsi:type="xsd:string">${config.cdr_email}</email>
-            <token xsi:type="xsd:string">${config.cdr_token}</token>
+            <email xsi:type="xsd:string">${config.sync_email}</email>
+            <token xsi:type="xsd:string">${config.sync_token}</token>
             <fecha xsi:type="xsd:string">${syncDate}</fecha>
             <formato xsi:type="xsd:string">json</formato>
         </ns1:productos_con_galeria>
     </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>`;
 
-    const soapUrl = 'https://www.cdrmedios.com/ws/productos/service.php?class=SublimewsProductosUsuariosCompleto';
+    // URL del Web Service SOAP del proveedor (configurada desde el panel admin)
+    const soapUrl = config.sync_url || process.env.PROVIDER_SOAP_URL;
+
+    if (!soapUrl) {
+      throw new Error('URL del web service SOAP no configurada. Ingresá la URL en la configuración del proveedor.');
+    }
 
     const response = await fetch(soapUrl, {
       method: 'POST',
@@ -122,16 +132,24 @@ export async function POST(req: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`SOAP error: HTTP ${response.status} - ${response.statusText}`);
+      const statusText = response.statusText || 'Unknown';
+      if (response.status === 405) {
+        throw new Error(`La URL del web service rechazó la solicitud (HTTP 405). Verificá que la URL sea correcta y acepte peticiones SOAP POST.`);
+      }
+      if (response.status === 401 || response.status === 403) {
+        throw new Error(`Acceso denegado (HTTP ${response.status}). Verificá que el email y token sean correctos.`);
+      }
+      if (response.status === 404) {
+        throw new Error(`URL no encontrada (HTTP 404). Verificá que la URL del web service sea correcta.`);
+      }
+      throw new Error(`Error del servidor SOAP: HTTP ${response.status} - ${statusText}`);
     }
 
     const responseText = await response.text();
 
     // Extraer el JSON del envelope SOAP de respuesta
-    // La respuesta SOAP envuelve el resultado en tags XML, necesitamos extraer el JSON
     let productsJson: string;
 
-    // Intentar extraer el contenido de la respuesta SOAP
     const returnMatch = responseText.match(/<return[^>]*>([\s\S]*?)<\/return>/i)
       || responseText.match(/<productos_con_galeriaReturn[^>]*>([\s\S]*?)<\/productos_con_galeriaReturn>/i)
       || responseText.match(/<ns\d*:return[^>]*>([\s\S]*?)<\/ns\d*:return>/i);
@@ -139,8 +157,6 @@ export async function POST(req: NextRequest) {
     if (returnMatch) {
       productsJson = returnMatch[1];
     } else {
-      // Quizá la respuesta ya es JSON puro o tiene otro formato
-      // Intentar encontrar el array JSON directamente
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         productsJson = jsonMatch[0];
@@ -149,7 +165,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Decodificar entidades HTML que pueda tener
+    // Decodificar entidades HTML
     productsJson = productsJson
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
@@ -172,30 +188,30 @@ export async function POST(req: NextRequest) {
     let failed = 0;
     const errors: string[] = [];
 
-    // Obtener o crear categoría por defecto para productos CDR
+    // Obtener o crear categoría por defecto para productos importados
     let defaultCategory = await prisma.category.findFirst({
-      where: { slug: 'cdr-medios' },
+      where: { slug: 'importados' },
     });
     if (!defaultCategory) {
       defaultCategory = await prisma.category.create({
         data: {
-          name: 'CDR Medios',
-          slug: 'cdr-medios',
-          description: 'Productos importados desde CDR Medios',
+          name: 'Importados',
+          slug: 'importados',
+          description: 'Productos importados desde proveedor',
           active: true,
         },
       });
     }
 
-    // Obtener o crear marca CDR Medios
+    // Obtener o crear marca genérica para productos importados
     let defaultBrand = await prisma.brand.findFirst({
-      where: { slug: 'cdr-medios' },
+      where: { slug: 'importados' },
     });
     if (!defaultBrand) {
       defaultBrand = await prisma.brand.create({
         data: {
-          name: 'CDR Medios',
-          slug: 'cdr-medios',
+          name: 'Importados',
+          slug: 'importados',
           active: true,
         },
       });
@@ -235,7 +251,7 @@ export async function POST(req: NextRequest) {
         const existing = await prisma.product.findFirst({
           where: {
             sourceId: codigo,
-            sourceApi: 'cdr-medios',
+            sourceApi: 'provider-api',
           },
         });
 
@@ -264,7 +280,6 @@ export async function POST(req: NextRequest) {
           // Verificar que el SKU no exista
           const skuExists = await prisma.product.findFirst({ where: { sku: codigo } });
           if (skuExists) {
-            // Actualizar el existente si tiene el mismo SKU
             await prisma.product.update({
               where: { id: skuExists.id },
               data: {
@@ -275,7 +290,7 @@ export async function POST(req: NextRequest) {
                 description: descripcion || skuExists.description,
                 shortDesc: copete || skuExists.shortDesc,
                 sourceId: codigo,
-                sourceApi: 'cdr-medios',
+                sourceApi: 'provider-api',
                 barcode: gtin || skuExists.barcode,
               },
             });
@@ -295,7 +310,7 @@ export async function POST(req: NextRequest) {
                 categoryId: defaultCategory.id,
                 brandId: defaultBrand.id,
                 sourceId: codigo,
-                sourceApi: 'cdr-medios',
+                sourceApi: 'provider-api',
                 active: stock > 0,
                 specs: nroParte || modelo
                   ? JSON.stringify({ modelo: modelo || '', nro_parte: nroParte || '' })
@@ -326,8 +341,8 @@ export async function POST(req: NextRequest) {
 
     // Guardar última fecha de sync
     await prisma.siteSetting.upsert({
-      where: { key: 'cdr_last_sync' },
-      create: { key: 'cdr_last_sync', value: new Date().toISOString() },
+      where: { key: 'sync_last_run' },
+      create: { key: 'sync_last_run', value: new Date().toISOString() },
       update: { value: new Date().toISOString() },
     });
 
@@ -340,7 +355,6 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    // Actualizar log con error
     await prisma.syncLog.update({
       where: { id: syncLog.id },
       data: {
