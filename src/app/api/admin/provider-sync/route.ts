@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',
-        'SOAPAction': `${soapUrl}&method=productos_con_galeria`,
+        'SOAPAction': '""',
       },
       body: soapXml,
     });

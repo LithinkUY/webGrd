@@ -48,7 +48,7 @@ export async function POST() {
       method: 'POST',
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',
-        'SOAPAction': `${config.sync_url}&method=productos_con_galeria`,
+        'SOAPAction': '""',
       },
       body: soapXml,
       signal: AbortSignal.timeout(15000),
