@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import {
   ShoppingCartIcon,
@@ -15,16 +15,34 @@ import {
 import { useCart } from '@/store/cart';
 import SearchBar from './SearchBar';
 
-const searchCategories = [
-  { name: 'Notebooks', slug: 'notebooks' },
-  { name: 'PC Escritorio', slug: 'pc-escritorio' },
-  { name: 'Componentes', slug: 'componentes' },
-  { name: 'Monitores', slug: 'monitores' },
-  { name: 'Periféricos', slug: 'perifericos' },
-  { name: 'Impresoras', slug: 'impresoras' },
-  { name: 'Redes', slug: 'redes' },
-  { name: 'Accesorios', slug: 'accesorios' },
-  { name: 'CDR Medios', slug: 'cdr-medios' },
+interface MenuCategory {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  children: { id: string; name: string; slug: string }[];
+}
+
+interface CustomMenuItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: string | null;
+  openNew: boolean;
+  children: CustomMenuItem[];
+}
+
+// Fallback categories in case API fails
+const fallbackCategories: MenuCategory[] = [
+  { id: '1', name: 'Notebooks', slug: 'notebooks', icon: null, children: [] },
+  { id: '2', name: 'PC Escritorio', slug: 'pc-escritorio', icon: null, children: [] },
+  { id: '3', name: 'Componentes', slug: 'componentes', icon: null, children: [] },
+  { id: '4', name: 'Monitores', slug: 'monitores', icon: null, children: [] },
+  { id: '5', name: 'Periféricos', slug: 'perifericos', icon: null, children: [] },
+  { id: '6', name: 'Impresoras', slug: 'impresoras', icon: null, children: [] },
+  { id: '7', name: 'Redes', slug: 'redes', icon: null, children: [] },
+  { id: '8', name: 'Accesorios', slug: 'accesorios', icon: null, children: [] },
+  { id: '9', name: 'CDR Medios', slug: 'cdr-medios', icon: null, children: [] },
 ];
 
 export default function Header() {
@@ -41,9 +59,21 @@ export default function Header() {
   const [logoAccent, setLogoAccent] = useState('Impo');
   const [logoColor, setLogoColor] = useState('#e8850c');
   const [logoImageUrl, setLogoImageUrl] = useState('');
+  const [menuCategories, setMenuCategories] = useState<MenuCategory[]>(fallbackCategories);
+  const [customMenuItems, setCustomMenuItems] = useState<CustomMenuItem[]>([]);
+
+  const loadMenu = useCallback(async () => {
+    try {
+      const res = await fetch('/api/public/menu');
+      const data = await res.json();
+      if (data.categories?.length) setMenuCategories(data.categories);
+      if (data.menuItems) setCustomMenuItems(data.menuItems);
+    } catch { /* keep fallback */ }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
+    loadMenu();
     fetch('/api/public/settings?keys=logo_text,logo_accent,logo_color,logo_image_url,color_secondary')
       .then(r => r.json())
       .then((data: Record<string, string>) => {
@@ -53,7 +83,7 @@ export default function Header() {
         if (data.logo_image_url) setLogoImageUrl(data.logo_image_url);
       })
       .catch(() => {});
-  }, []);
+  }, [loadMenu]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -99,7 +129,7 @@ export default function Header() {
                   className="appearance-none h-full bg-[#3a3a3a] text-white text-xs px-3 pr-7 border-r border-gray-600 cursor-pointer focus:outline-none"
                 >
                   <option value="all">Todas las categorías</option>
-                  {searchCategories.map(c => (
+                  {menuCategories.map(c => (
                     <option key={c.slug} value={c.slug}>{c.name}</option>
                   ))}
                 </select>
@@ -190,13 +220,36 @@ export default function Header() {
       <nav className="hidden md:block bg-[#2a2a2a] border-t border-[#3a3a3a]">
         <div className="max-w-[1400px] mx-auto px-4">
           <ul className="flex items-center gap-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-            {searchCategories.map(cat => (
-              <li key={cat.slug} className="flex-shrink-0">
+            {menuCategories.map(cat => (
+              <li key={cat.slug} className="flex-shrink-0 group relative">
                 <Link
                   href={`/productos?cat=${cat.slug}`}
                   className="block px-3 py-2 text-[12px] text-gray-300 hover:text-white hover:bg-[#3a3a3a] transition-colors whitespace-nowrap"
                 >
+                  {cat.icon && <span className="mr-1">{cat.icon}</span>}
                   {cat.name}
+                </Link>
+                {cat.children.length > 0 && (
+                  <div className="hidden group-hover:block absolute top-full left-0 bg-[#333] rounded-b-lg shadow-xl py-1 z-50 min-w-[180px]">
+                    {cat.children.map(sub => (
+                      <Link key={sub.id} href={`/productos?cat=${sub.slug}`}
+                        className="block px-4 py-2 text-[11px] text-gray-400 hover:text-white hover:bg-[#444] transition-colors whitespace-nowrap">
+                        {sub.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+            {customMenuItems.map(item => (
+              <li key={item.id} className="flex-shrink-0">
+                <Link
+                  href={item.href}
+                  target={item.openNew ? '_blank' : undefined}
+                  className="block px-3 py-2 text-[12px] text-gray-300 hover:text-white hover:bg-[#3a3a3a] transition-colors whitespace-nowrap"
+                >
+                  {item.icon && <span className="mr-1">{item.icon}</span>}
+                  {item.label}
                 </Link>
               </li>
             ))}
@@ -241,12 +294,30 @@ export default function Header() {
           </Link>
           {/* Categorías mobile */}
           <ul className="py-2">
-            {searchCategories.map(cat => (
+            {menuCategories.map(cat => (
               <li key={cat.slug}>
                 <Link href={`/productos?cat=${cat.slug}`}
                   className="block px-4 py-2.5 text-gray-300 hover:text-white hover:bg-[#2a2a2a] text-sm transition-colors"
                   onClick={() => setMobileMenu(false)}>
+                  {cat.icon && <span className="mr-1">{cat.icon}</span>}
                   {cat.name}
+                </Link>
+                {cat.children.length > 0 && cat.children.map(sub => (
+                  <Link key={sub.id} href={`/productos?cat=${sub.slug}`}
+                    className="block pl-8 pr-4 py-2 text-gray-400 hover:text-white hover:bg-[#2a2a2a] text-xs transition-colors"
+                    onClick={() => setMobileMenu(false)}>
+                    ↳ {sub.name}
+                  </Link>
+                ))}
+              </li>
+            ))}
+            {customMenuItems.map(item => (
+              <li key={item.id}>
+                <Link href={item.href} target={item.openNew ? '_blank' : undefined}
+                  className="block px-4 py-2.5 text-gray-300 hover:text-white hover:bg-[#2a2a2a] text-sm transition-colors"
+                  onClick={() => setMobileMenu(false)}>
+                  {item.icon && <span className="mr-1">{item.icon}</span>}
+                  {item.label}
                 </Link>
               </li>
             ))}
