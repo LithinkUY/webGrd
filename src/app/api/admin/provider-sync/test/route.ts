@@ -55,7 +55,7 @@ export async function POST() {
     });
 
     const responseText = await response.text();
-    const preview = responseText.substring(0, 800);
+    const preview = responseText; // full response, no limit
 
     // Detectar faultstring
     const faultMatch = responseText.match(/<faultstring[^>]*>([\s\S]*?)<\/faultstring>/i);

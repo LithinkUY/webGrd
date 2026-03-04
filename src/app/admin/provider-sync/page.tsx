@@ -185,11 +185,19 @@ export default function AdminProviderSync() {
                 <p className="text-xs text-gray-400 mt-1">HTTP Status: {testResult.httpStatus}</p>
               )}
               {testResult.rawResponse && (
-                <details className="mt-2">
-                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">🔍 Ver respuesta raw del servidor</summary>
-                  <pre className="mt-2 text-[10px] bg-white border rounded p-2 overflow-x-auto max-h-40 overflow-y-auto text-gray-600 whitespace-pre-wrap break-all">
-                    {testResult.rawResponse}
-                  </pre>
+                <details className="mt-2" open>
+                  <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 flex items-center justify-between">
+                    <span>🔍 Respuesta raw del servidor ({testResult.rawResponse.length} chars)</span>
+                  </summary>
+                  <div className="mt-2 relative">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(testResult.rawResponse)}
+                      className="absolute top-2 right-2 text-[10px] bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded z-10"
+                    >📋 Copiar</button>
+                    <pre className="text-[10px] bg-white border rounded p-2 pr-16 overflow-x-auto h-64 overflow-y-auto text-gray-600 whitespace-pre-wrap break-all">
+                      {testResult.rawResponse}
+                    </pre>
+                  </div>
                 </details>
               )}
             </div>
