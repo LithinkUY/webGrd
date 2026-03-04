@@ -1,0 +1,46 @@
+version: 2
+updates:
+  # Actualizar dependencias npm automáticamente
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Montevideo"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps)"
+    reviewers:
+      - "LithinkUY"
+    groups:
+      # Agrupar actualizaciones de Next.js juntas
+      nextjs:
+        patterns:
+          - "next"
+          - "next-*"
+          - "@next/*"
+      # Agrupar Prisma juntas
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+      # Agrupar tipos de TypeScript
+      typescript-types:
+        patterns:
+          - "@types/*"
+
+  # Actualizar GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Montevideo"
+    labels:
+      - "dependencies"
+      - "github-actions"

@@ -1,0 +1,139 @@
+name: 🏥 Weekly Health Check
+
+on:
+  schedule:
+    # Cada lunes a las 8:00 AM hora Uruguay
+    - cron: '0 11 * * 1'
+  workflow_dispatch: # Permite ejecutar manualmente
+
+jobs:
+  health-check:
+    name: Production Health Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for security vulnerabilities
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Check outdated packages
+        run: npm outdated || true
+
+      - name: Check homepage is responding
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.NEXT_PUBLIC_SITE_URL || 'https://web-grd.vercel.app' }})
+          echo "Homepage status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::warning::Homepage returned HTTP $STATUS"
+          fi
+
+      - name: Check admin login page
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.NEXT_PUBLIC_SITE_URL || 'https://web-grd.vercel.app' }}/auth/login")
+          echo "Login page status: $STATUS"
+
+      - name: Check API health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.NEXT_PUBLIC_SITE_URL || 'https://web-grd.vercel.app' }}/api/public/settings?keys=logo_text")
+          echo "API status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::API not responding - HTTP $STATUS"
+            exit 1
+          fi
+
+      - name: Generate Prisma Client (validate schema)
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: ✅ Health check passed
+        if: success()
+        run: |
+          echo "✅ Sistema operativo - $(date)"
+          echo "🌐 URL: ${{ secrets.NEXT_PUBLIC_SITE_URL || 'https://web-grd.vercel.app' }}"
+
+  dependency-review:
+    name: Dependency Security Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security audit
+        id: audit
+        run: |
+          npm audit --json > audit-report.json 2>&1 || true
+          VULNERABILITIES=$(cat audit-report.json | node -e "
+            const data = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
+            const meta = data.metadata || {};
+            const vulns = meta.vulnerabilities || {};
+            const total = (vulns.high || 0) + (vulns.critical || 0);
+            console.log(total);
+          " 2>/dev/null || echo "0")
+          echo "HIGH_CRITICAL_VULNS=$VULNERABILITIES" >> $GITHUB_OUTPUT
+          echo "Vulnerabilidades high/critical: $VULNERABILITIES"
+
+      - name: Create security issue if vulnerabilities found
+        if: steps.audit.outputs.HIGH_CRITICAL_VULNS != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let auditData = {};
+            try {
+              auditData = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+            } catch(e) {}
+            
+            const vulns = auditData.metadata?.vulnerabilities || {};
+            const body = `## ⚠️ Vulnerabilidades de Seguridad Detectadas
+            
+            | Nivel | Cantidad |
+            |-------|----------|
+            | 🔴 Critical | ${vulns.critical || 0} |
+            | 🟠 High | ${vulns.high || 0} |
+            | 🟡 Moderate | ${vulns.moderate || 0} |
+            | 🟢 Low | ${vulns.low || 0} |
+            
+            **Acción recomendada:** Ejecutar \`npm audit fix\` o actualizar las dependencias afectadas.
+            
+            > Generado automáticamente por GitHub Actions - ${new Date().toLocaleDateString('es-UY')}`;
+            
+            // Verificar si ya existe un issue abierto similar
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'security',
+              state: 'open'
+            });
+            
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '⚠️ Vulnerabilidades de seguridad detectadas en dependencias',
+                body,
+                labels: ['security', 'automated']
+              });
+            }
