@@ -78,6 +78,16 @@ export async function POST() {
       });
     }
 
+    // Detectar si el servidor devolvió el WSDL en vez de una respuesta SOAP
+    if (responseText.includes('<wsdl:definitions') || responseText.includes('wsdl:service')) {
+      return NextResponse.json({
+        success: false,
+        httpStatus: response.status,
+        error: 'El servidor devolvió el WSDL en vez de procesar la solicitud. Asegurate de que la URL NO tenga "&wsdl" al final y que las credenciales estén guardadas.',
+        rawResponse: preview,
+      });
+    }
+
     // Detectar <return> con datos
     const returnMatch = responseText.match(/<return[^>]*>([\s\S]*?)<\/return>/i)
       || responseText.match(/<productos_con_galeriaReturn[^>]*>([\s\S]*?)<\/productos_con_galeriaReturn>/i)

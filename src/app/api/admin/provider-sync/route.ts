@@ -165,6 +165,11 @@ export async function POST(req: NextRequest) {
       throw new Error(`Respuesta inválida del servidor (posible redirect o página de login). Respuesta: ${responseText.substring(0, 200)}`);
     }
 
+    // Detectar si el servidor devolvió el WSDL
+    if (responseText.includes('<wsdl:definitions') || responseText.includes('wsdl:service')) {
+      throw new Error('El servidor devolvió el WSDL en vez de procesar la solicitud. Verificá que la URL NO tenga "&wsdl" al final.');
+    }
+
     const returnMatch = responseText.match(/<return[^>]*>([\s\S]*?)<\/return>/i)
       || responseText.match(/<productos_con_galeriaReturn[^>]*>([\s\S]*?)<\/productos_con_galeriaReturn>/i)
       || responseText.match(/<ns\d*:return[^>]*>([\s\S]*?)<\/ns\d*:return>/i);
