@@ -19,7 +19,7 @@ function fetchPublicSettings() {
   if (!_settingsPromise) {
     _settingsPromise = fetch('/api/public/settings?keys=hide_prices,site_whatsapp')
       .then(r => r.ok ? r.json() : {})
-      .then(data => {
+      .then((data: Record<string, string>) => {
         _settingsCache = {
           hidePrices: data.hide_prices === 'true',
           whatsapp: data.site_whatsapp ? data.site_whatsapp.replace(/\D/g, '') : '',
