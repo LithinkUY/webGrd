@@ -15,6 +15,7 @@ const defaultSettings: { key: string; label: string; type: string; group: string
   { key: 'currency', label: 'Moneda', type: 'text', group: 'comercio', placeholder: 'USD' },
   { key: 'tax_rate', label: 'IVA (%)', type: 'number', group: 'comercio', placeholder: '22' },
   { key: 'shipping_cost', label: 'Costo envío estándar', type: 'number', group: 'comercio', placeholder: '5' },
+  { key: 'hide_prices', label: 'Ocultar precios (mostrar botón Consultar)', type: 'checkbox', group: 'comercio' },
   { key: 'free_shipping_min', label: 'Envío gratis desde (USD)', type: 'number', group: 'comercio', placeholder: '100' },
   { key: 'meta_title', label: 'Meta Title', type: 'text', group: 'seo', placeholder: 'ImpoTech - Tecnología al mejor precio' },
   { key: 'meta_description', label: 'Meta Description', type: 'textarea', group: 'seo', placeholder: 'Tienda de tecnología con los mejores precios...' },
@@ -91,6 +92,16 @@ export default function AdminConfiguracion() {
                   {s.type === 'textarea' ? (
                     <textarea value={settings[s.key] || ''} onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.value }))}
                       className={inputClass} rows={3} placeholder={s.placeholder} />
+                  ) : s.type === 'checkbox' ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={settings[s.key] === 'true'}
+                        onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.checked ? 'true' : 'false' }))}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm text-gray-600">{s.label}</span>
+                    </div>
                   ) : (
                     <input type={s.type} value={settings[s.key] || ''} onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.value }))}
                       className={inputClass} placeholder={s.placeholder} />

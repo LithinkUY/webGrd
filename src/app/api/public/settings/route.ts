@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
 // Public endpoint — only returns non-sensitive keys
-const ALLOWED_PREFIXES = ['logo_', 'footer_', 'site_name', 'site_whatsapp', 'site_description', 'favicon_url', 'hero_slides', 'color_'];
+// Add 'hide_prices' so front-end can decide to hide prices and show contact button
+const ALLOWED_PREFIXES = ['logo_', 'footer_', 'site_name', 'site_whatsapp', 'site_description', 'favicon_url', 'hero_slides', 'color_', 'hide_prices'];
 
 function isAllowed(key: string) {
   return ALLOWED_PREFIXES.some(p => key === p || key.startsWith(p));
