@@ -63,8 +63,8 @@ export async function POST(req: NextRequest) {
         }
 
         // 2 – Fetch individual details in small batches to avoid 429
-        const BATCH = 5;
-        const DELAY_MS = 300;
+        const BATCH = 3;
+        const DELAY_MS = 500;
         const detailResults: PromiseSettledResult<any>[] = [];
         for (let i = 0; i < pageProducts.length; i += BATCH) {
             const chunk = pageProducts.slice(i, i + BATCH);

@@ -12,23 +12,35 @@ function getApiKey(): string {
     return key;
 }
 
-async function stockbaFetch(path: string, options: RequestInit = {}) {
+async function stockbaFetch(path: string, options: RequestInit = {}, retries = 4) {
     const apiKey = getApiKey();
-    const res = await fetch(`${BASE_URL}${path}`, {
-        ...options,
-        headers: {
-            'X-API-KEY': apiKey,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            ...(options.headers || {}),
-        },
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        const msg = data.message || data.error || `HTTP ${res.status}`;
-        throw new Error(`StockBA ${res.status}: ${msg}`);
+    let attempt = 0;
+    while (true) {
+        const res = await fetch(`${BASE_URL}${path}`, {
+            ...options,
+            headers: {
+                'X-API-KEY': apiKey,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                ...(options.headers || {}),
+            },
+        });
+
+        if (res.status === 429 && attempt < retries) {
+            // Exponential backoff: 2s, 4s, 8s, 16s
+            const wait = 2000 * Math.pow(2, attempt);
+            await new Promise(r => setTimeout(r, wait));
+            attempt++;
+            continue;
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            const msg = data.message || data.error || `HTTP ${res.status}`;
+            throw new Error(`StockBA ${res.status}: ${msg}`);
+        }
+        return data;
     }
-    return data;
 }
 
 // ─── Products ───────────────────────────────────────────────
