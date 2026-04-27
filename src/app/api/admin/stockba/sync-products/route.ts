@@ -140,38 +140,37 @@ export async function POST(req: NextRequest) {
                 });
 
                 if (existing) {
-                    await prisma.product.update({
-                        where: { id: existing.id },
-                        data: {
-                            name: detail.name ?? sp.name,
-                            sku,
-                            active: detail.active ?? sp.active ?? true,
-                            ...(overwritePrice && price > 0 ? { price, cost: cost ?? undefined } : {}),
-                            ...(images ? { images } : {}),
-                            ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
-                            ...(brandId ? { brand: { connect: { id: brandId } } } : {}),
-                        },
-                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const updateData: any = {
+                        name: detail.name ?? sp.name,
+                        sku,
+                        active: detail.active ?? sp.active ?? true,
+                    };
+                    if (overwritePrice && price > 0) { updateData.price = price; if (cost != null) updateData.cost = cost; }
+                    if (images) updateData.images = images;
+                    if (categoryId) updateData.categoryId = categoryId;
+                    if (brandId) updateData.brandId = brandId;
+                    await prisma.product.update({ where: { id: existing.id }, data: updateData });
                     results.updated++;
                 } else {
                     const baseSlug = slugify(detail.name ?? sp.name) || `product-${sp.id}`;
                     const slug = ensureUniqueSlug(baseSlug, slugSet);
-                    await prisma.product.create({
-                        data: {
-                            name: detail.name ?? sp.name,
-                            slug,
-                            sku,
-                            price,
-                            cost: cost ?? undefined,
-                            stock: 0,
-                            active: detail.active ?? sp.active ?? true,
-                            sourceId: String(sp.id),
-                            sourceApi: 'stockba',
-                            images: images ?? '[]',
-                            ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
-                            ...(brandId ? { brand: { connect: { id: brandId } } } : {}),
-                        },
-                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const createData: any = {
+                        name: detail.name ?? sp.name,
+                        slug,
+                        sku,
+                        price,
+                        stock: 0,
+                        active: detail.active ?? sp.active ?? true,
+                        sourceId: String(sp.id),
+                        sourceApi: 'stockba',
+                        images: images ?? '[]',
+                    };
+                    if (cost != null) createData.cost = cost;
+                    if (categoryId) createData.categoryId = categoryId;
+                    if (brandId) createData.brandId = brandId;
+                    await prisma.product.create({ data: createData });
                     results.created++;
                 }
             } catch (err: any) {
