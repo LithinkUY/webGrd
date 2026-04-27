@@ -23,9 +23,10 @@ async function stockbaFetch(path: string, options: RequestInit = {}) {
             ...(options.headers || {}),
         },
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-        throw new Error(data.error || `StockBA error ${res.status}`);
+        const msg = data.message || data.error || `HTTP ${res.status}`;
+        throw new Error(`StockBA ${res.status}: ${msg}`);
     }
     return data;
 }

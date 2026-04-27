@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   try {
     stockbaProducts = await getAllStockBAProducts();
   } catch (err: any) {
-    return NextResponse.json({ error: 'Error StockBA API: ' + err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Error en la API de StockBA: ' + err.message + '. Verificá que la API de StockBA esté funcionando correctamente.' }, { status: 502 });
   }
 
   const existingSlugs = await prisma.product.findMany({ select: { slug: true } });

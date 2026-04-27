@@ -112,7 +112,7 @@ export default function AdminStockBAPage() {
             />
             <StatCard
               label="Productos sincronizados"
-              value={String(status.syncedProducts)}
+              value={String(status.syncedProducts ?? 0)}
             />
             <StatCard
               label="Última sincronización"
