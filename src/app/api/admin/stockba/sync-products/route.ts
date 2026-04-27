@@ -27,8 +27,8 @@ async function getDefaultCategoryId(): Promise<string> {
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const syncImages: boolean = body.syncImages !== false;
-  const overwritePrice: boolean = body.overwritePrice === true;
+  const syncImages: boolean = body.syncImages === true;   // default FALSE
+  const overwritePrice: boolean = body.overwritePrice === true; // default FALSE
   const results = { created: 0, updated: 0, skipped: 0, errors: [] as string[] };
 
   let stockbaProducts: any[];
