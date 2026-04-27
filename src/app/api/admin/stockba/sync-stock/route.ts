@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { getStockBAProductStock } from '@/lib/stockba';
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET, secureCookie: process.env.NODE_ENV === 'production' });
-  if (!token || token.role !== 'ADMIN') {
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as any).role !== 'ADMIN') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   const results = { updated: 0, skipped: 0, errors: [] as string[] };
