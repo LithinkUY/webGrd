@@ -8,7 +8,7 @@ async function isAdmin() {
   return role === 'admin' || role === 'ADMIN';
 }
 import prisma from '@/lib/prisma';
-import { getAllStockBAProducts, getStockBAProductStock } from '@/lib/stockba';
+import { getAllStockBAProducts } from '@/lib/stockba';
 
 function slugify(text: string): string {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-');
@@ -64,12 +64,7 @@ export async function POST(req: NextRequest) {
         }
         brandId = brand.id;
       }
-      let stockQty = 0;
-      try {
-        const stockRes = await getStockBAProductStock(Number(sp.id));
-        if (Array.isArray(stockRes.data)) stockQty = stockRes.data.reduce((s: number, l: any) => s + (l.quantity ?? 0), 0);
-        else if (typeof stockRes.quantity === 'number') stockQty = stockRes.quantity;
-      } catch { /* keep 0 */ }
+      let stockQty = 0; // use sync-stock route to update stock separately
       const sku = sp.sku && String(sp.sku).trim() ? String(sp.sku).trim() : ('SBA-' + sp.id);
       const images: string | undefined = syncImages && sp.image_url ? JSON.stringify([sp.image_url]) : undefined;
       const existing = await prisma.product.findFirst({ where: { sourceId: String(sp.id), sourceApi: 'stockba' } });
