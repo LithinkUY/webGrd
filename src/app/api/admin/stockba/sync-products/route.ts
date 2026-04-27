@@ -148,8 +148,8 @@ export async function POST(req: NextRequest) {
                             active: detail.active ?? sp.active ?? true,
                             ...(overwritePrice && price > 0 ? { price, cost: cost ?? undefined } : {}),
                             ...(images ? { images } : {}),
-                            category: categoryId ? { connect: { id: categoryId } } : undefined,
-                            brand: brandId ? { connect: { id: brandId } } : undefined,
+                            ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
+                            ...(brandId ? { brand: { connect: { id: brandId } } } : {}),
                         },
                     });
                     results.updated++;
@@ -168,8 +168,8 @@ export async function POST(req: NextRequest) {
                             sourceId: String(sp.id),
                             sourceApi: 'stockba',
                             images: images ?? '[]',
-                            category: categoryId ? { connect: { id: categoryId } } : undefined,
-                            brand: brandId ? { connect: { id: brandId } } : undefined,
+                            ...(categoryId ? { category: { connect: { id: categoryId } } } : {}),
+                            ...(brandId ? { brand: { connect: { id: brandId } } } : {}),
                         },
                     });
                     results.created++;
