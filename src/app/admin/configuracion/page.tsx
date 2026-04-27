@@ -15,13 +15,23 @@ const defaultSettings: { key: string; label: string; type: string; group: string
   { key: 'currency', label: 'Moneda', type: 'text', group: 'comercio', placeholder: 'USD' },
   { key: 'tax_rate', label: 'IVA (%)', type: 'number', group: 'comercio', placeholder: '22' },
   { key: 'shipping_cost', label: 'Costo envío estándar', type: 'number', group: 'comercio', placeholder: '5' },
-  { key: 'hide_prices', label: 'Ocultar precios (mostrar botón Consultar)', type: 'checkbox', group: 'comercio' },
   { key: 'free_shipping_min', label: 'Envío gratis desde (USD)', type: 'number', group: 'comercio', placeholder: '100' },
+  { key: 'hide_prices', label: 'Ocultar precios (mostrar botón "Consultar")', type: 'toggle', group: 'comercio' },
   { key: 'meta_title', label: 'Meta Title', type: 'text', group: 'seo', placeholder: 'ImpoTech - Tecnología al mejor precio' },
   { key: 'meta_description', label: 'Meta Description', type: 'textarea', group: 'seo', placeholder: 'Tienda de tecnología con los mejores precios...' },
   { key: 'facebook_url', label: 'Facebook', type: 'text', group: 'social', placeholder: 'https://facebook.com/impotech' },
   { key: 'instagram_url', label: 'Instagram', type: 'text', group: 'social', placeholder: 'https://instagram.com/impotech' },
   { key: 'twitter_url', label: 'Twitter / X', type: 'text', group: 'social', placeholder: 'https://x.com/impotech' },
+  { key: 'footer_desc', label: 'Descripción del footer', type: 'text', group: 'footer', placeholder: 'La tienda de insumos de tecnología...' },
+  { key: 'footer_phone1', label: 'Teléfono 1', type: 'text', group: 'footer', placeholder: '2929 0990' },
+  { key: 'footer_phone2', label: 'Teléfono 2', type: 'text', group: 'footer', placeholder: '2924 9009' },
+  { key: 'footer_email', label: 'Email de contacto', type: 'email', group: 'footer', placeholder: 'info@empresa.com' },
+  { key: 'footer_hours', label: 'Horario de atención', type: 'text', group: 'footer', placeholder: 'Lun. a Vie. de 9.30 a 18.30 hs.' },
+  { key: 'footer_address', label: 'Dirección (Ventas)', type: 'text', group: 'footer', placeholder: 'Calle 1234' },
+  { key: 'footer_service', label: 'Dirección (Service)', type: 'text', group: 'footer', placeholder: 'Calle 5678' },
+  { key: 'footer_price_disclaimer', label: 'Texto de precios / impuestos', type: 'text', group: 'footer', placeholder: 'Los precios son en dólares americanos y no incluyen IVA.' },
+  { key: 'footer_bank_info', label: 'Cuentas bancarias (separadas por |)', type: 'textarea', group: 'footer', placeholder: 'BROU C. Corriente dólares Nº 1234 | SANTANDER C. Corriente dólares Nº 5678' },
+  { key: 'footer_copyright', label: 'Nombre en Copyright', type: 'text', group: 'footer', placeholder: 'BA Soluciones' },
 ];
 
 export default function AdminConfiguracion() {
@@ -67,6 +77,7 @@ export default function AdminConfiguracion() {
     { id: 'comercio', label: '💰 Comercio', desc: 'Moneda, impuestos y envíos' },
     { id: 'seo', label: '🔍 SEO', desc: 'Optimización para buscadores' },
     { id: 'social', label: '📱 Redes Sociales', desc: 'Enlaces a redes' },
+    { id: 'footer', label: '🦶 Footer', desc: 'Textos, cuentas bancarias y copyright del pie de página' },
   ];
 
   const inputClass = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30";
@@ -88,23 +99,31 @@ export default function AdminConfiguracion() {
             <div className="space-y-4">
               {defaultSettings.filter(s => s.group === group.id).map(s => (
                 <div key={s.key}>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{s.label}</label>
-                  {s.type === 'textarea' ? (
-                    <textarea value={settings[s.key] || ''} onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.value }))}
-                      className={inputClass} rows={3} placeholder={s.placeholder} />
-                  ) : s.type === 'checkbox' ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={settings[s.key] === 'true'}
-                        onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.checked ? 'true' : 'false' }))}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-sm text-gray-600">{s.label}</span>
-                    </div>
+                  {s.type === 'toggle' ? (
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={settings[s.key] === 'true'}
+                          onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.checked ? 'true' : 'false' }))}
+                        />
+                        <div className={`w-10 h-6 rounded-full transition-colors ${settings[s.key] === 'true' ? 'bg-[#e8850c]' : 'bg-gray-300'}`}></div>
+                        <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${settings[s.key] === 'true' ? 'translate-x-4' : ''}`}></div>
+                      </div>
+                      <span className="text-xs font-medium text-gray-600">{s.label}</span>
+                    </label>
                   ) : (
-                    <input type={s.type} value={settings[s.key] || ''} onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.value }))}
-                      className={inputClass} placeholder={s.placeholder} />
+                    <>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{s.label}</label>
+                      {s.type === 'textarea' ? (
+                        <textarea value={settings[s.key] || ''} onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.value }))}
+                          className={inputClass} rows={3} placeholder={s.placeholder} />
+                      ) : (
+                        <input type={s.type} value={settings[s.key] || ''} onChange={e => setSettings(prev => ({ ...prev, [s.key]: e.target.value }))}
+                          className={inputClass} placeholder={s.placeholder} />
+                      )}
+                    </>
                   )}
                 </div>
               ))}
