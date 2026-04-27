@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const page = Number(body.page ?? 1);
-    const perPage = Number(body.perPage ?? 50);
+    const perPage = Number(body.perPage ?? 20);
     const syncImages = body.syncImages !== false;
     const overwritePrice = body.overwritePrice === true;
 
@@ -62,10 +62,20 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ ok: true, ...results, page, lastPage, total, done: true });
         }
 
-        // 2 – Fetch individual details IN PARALLEL to get variations (prices)
-        const detailResults = await Promise.allSettled(
-            pageProducts.map((p: any) => getStockBAProduct(p.id).then((r: any) => r.data ?? r))
-        );
+        // 2 – Fetch individual details in small batches to avoid 429
+        const BATCH = 5;
+        const DELAY_MS = 300;
+        const detailResults: PromiseSettledResult<any>[] = [];
+        for (let i = 0; i < pageProducts.length; i += BATCH) {
+            const chunk = pageProducts.slice(i, i + BATCH);
+            const batchRes = await Promise.allSettled(
+                chunk.map((p: any) => getStockBAProduct(p.id).then((r: any) => r.data ?? r))
+            );
+            detailResults.push(...batchRes);
+            if (i + BATCH < pageProducts.length) {
+                await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+            }
+        }
 
         // 3 – Build a map: id → detailed product
         const detailMap = new Map<number, any>();

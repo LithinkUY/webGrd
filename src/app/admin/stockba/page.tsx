@@ -65,7 +65,7 @@ export default function AdminStockBAPage() {
                 const res = await fetch('/api/admin/stockba/sync-products', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ page, perPage: 50, overwritePrice, syncImages }),
+                    body: JSON.stringify({ page, perPage: 20, overwritePrice, syncImages }),
                 });
                 const data = await res.json();
                 if (!data.ok) throw new Error(data.error || 'Error en página ' + page);
@@ -75,6 +75,8 @@ export default function AdminStockBAPage() {
                 totals.skipped += data.skipped ?? 0;
                 if (Array.isArray(data.errors)) totals.errors.push(...data.errors);
                 page++;
+                // pause between pages to respect rate limits
+                if (page <= lastPage) await new Promise(r => setTimeout(r, 500));
             } while (page <= lastPage);
             setProductResult({ ok: true, ...totals, total: lastPage * 50 });
             loadStatus();
