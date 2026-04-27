@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+
+async function isAdmin() {
+  const session = await getServerSession(authOptions);
+  const role = session?.user?.role;
+  return role === 'admin' || role === 'ADMIN';
+}
 import prisma from '@/lib/prisma';
 import { getStockBAProductStock } from '@/lib/stockba';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
+  if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const results = { updated: 0, skipped: 0, errors: [] as string[] };
   try {
     const products = await prisma.product.findMany({ where: { sourceApi: 'stockba', sourceId: { not: null } }, select: { id: true, sourceId: true, name: true } });

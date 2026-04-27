@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+
+async function isAdmin() {
+  const session = await getServerSession(authOptions);
+  const role = session?.user?.role;
+  return role === 'admin' || role === 'ADMIN';
+}
 import prisma from '@/lib/prisma';
 import { getAllStockBAProducts, getStockBAProductStock } from '@/lib/stockba';
 
 function slugify(text: string): string {
   return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-');
 }
-
 function ensureUniqueSlug(base: string, existing: Set<string>): string {
   let slug = base; let i = 2;
   while (existing.has(slug)) { slug = base + '-' + i++; }
@@ -15,10 +20,7 @@ function ensureUniqueSlug(base: string, existing: Set<string>): string {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'ADMIN') {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
+  if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const syncImages: boolean = body.syncImages !== false;
   const overwritePrice: boolean = body.overwritePrice === true;
