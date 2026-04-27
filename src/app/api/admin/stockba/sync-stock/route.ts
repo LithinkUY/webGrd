@@ -14,18 +14,21 @@ export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   const results = { updated: 0, skipped: 0, errors: [] as string[] };
   try {
-    const products = await prisma.product.findMany({ where: { sourceApi: 'stockba', sourceId: { not: null } }, select: { id: true, sourceId: true, name: true } });
-    for (const product of products) {
-      if (!product.sourceId) continue;
+    const products = await prisma.product.findMany({
+      where: { sourceApi: 'stockba', sourceId: { not: null } },
+      select: { id: true, sourceId: true, name: true },
+    });
+    for (const p of products) {
+      if (!p.sourceId) continue;
       try {
-        const stockRes = await getStockBAProductStock(Number(product.sourceId));
-        let stockQty = 0;
-        if (Array.isArray(stockRes.data)) stockQty = stockRes.data.reduce((s: number, l: any) => s + (l.quantity ?? 0), 0);
-        else if (typeof stockRes.quantity === 'number') stockQty = stockRes.quantity;
-        await prisma.product.update({ where: { id: product.id }, data: { stock: stockQty } });
+        const res = await getStockBAProductStock(Number(p.sourceId));
+        let qty = 0;
+        if (Array.isArray(res.data)) qty = res.data.reduce((s: number, l: any) => s + (l.quantity ?? 0), 0);
+        else if (typeof res.quantity === 'number') qty = res.quantity;
+        await prisma.product.update({ where: { id: p.id }, data: { stock: qty } });
         results.updated++;
       } catch (err: any) {
-        results.errors.push('[' + product.sourceId + '] ' + product.name + ': ' + err.message);
+        results.errors.push('[' + p.sourceId + '] ' + p.name + ': ' + err.message);
         results.skipped++;
       }
     }
