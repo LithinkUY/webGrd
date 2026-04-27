@@ -80,8 +80,12 @@ export async function POST(req: NextRequest) {
         }
       }
       const sku = sp.sku && String(sp.sku).trim() ? String(sp.sku).trim() : ('SBA-' + sp.id);
-      const price = Number(sp.selling_price_inc_tax ?? sp.selling_price ?? 0);
-      const cost = sp.purchase_price != null ? Number(sp.purchase_price) : undefined;
+      // Prices: main product often has 0 — check variations[0] (DUMMY variation) for real prices
+      const v0 = Array.isArray(sp.variations) && sp.variations.length > 0 ? sp.variations[0] : null;
+      const rawPrice = Number(sp.selling_price_inc_tax ?? sp.selling_price ?? 0);
+      const rawCost  = sp.purchase_price != null ? Number(sp.purchase_price) : null;
+      const price = rawPrice > 0 ? rawPrice : Number(v0?.selling_price ?? v0?.price ?? 0);
+      const cost  = rawCost != null && rawCost > 0 ? rawCost : (v0?.purchase_price != null ? Number(v0.purchase_price) : undefined);
       const images = syncImages && sp.image_url ? JSON.stringify([sp.image_url]) : undefined;
 
       const existId = existMap.get(String(sp.id));

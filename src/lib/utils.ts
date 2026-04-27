@@ -1,8 +1,16 @@
-export function formatPrice(price: number): string {
+/**
+ * Formats a price with automatic currency detection.
+ * - Values >= 10  → UYU (Pesos Uruguayos)
+ * - Values < 10   → USD (used for products priced in dollars)
+ * Pass currency explicitly to override.
+ */
+export function formatPrice(price: number, currency?: 'UYU' | 'USD'): string {
+  const cur = currency ?? (price >= 10 ? 'UYU' : 'USD');
   return new Intl.NumberFormat('es-UY', {
     style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
+    currency: cur,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: cur === 'USD' ? 2 : 0,
   }).format(price);
 }
 
