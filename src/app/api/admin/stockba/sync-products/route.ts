@@ -1,31 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 import prisma from '@/lib/prisma';
 import { getAllStockBAProducts, getStockBAProductStock } from '@/lib/stockba';
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-');
 }
 
 function ensureUniqueSlug(base: string, existing: Set<string>): string {
-  let slug = base;
-  let i = 2;
+  let slug = base; let i = 2;
   while (existing.has(slug)) { slug = base + '-' + i++; }
-  existing.add(slug);
-  return slug;
+  existing.add(slug); return slug;
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || (session.user as any).role !== 'ADMIN') {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (!token || token.role !== 'ADMIN') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
   const body = await req.json().catch(() => ({}));
@@ -59,24 +49,20 @@ export async function POST(req: NextRequest) {
         const images: string | undefined = syncImages && sp.image_url ? JSON.stringify([sp.image_url]) : undefined;
         const existing = await prisma.product.findFirst({ where: { sourceId: String(sp.id), sourceApi: 'stockba' } });
         if (existing) {
-          const updateData: any = { name: sp.name, sku: sp.sku || null, stock: stockQty, active: sp.active ?? true };
-          if (overwritePrice) updateData.price = Number(sp.selling_price ?? 0);
-          if (images) updateData.images = images;
-          if (categoryId) updateData.categoryId = categoryId;
-          if (brandId) updateData.brandId = brandId;
-          await prisma.product.update({ where: { id: existing.id }, data: updateData });
+          const upd: any = { name: sp.name, sku: sp.sku || null, stock: stockQty, active: sp.active ?? true };
+          if (overwritePrice) upd.price = Number(sp.selling_price ?? 0);
+          if (images) upd.images = images;
+          if (categoryId) upd.categoryId = categoryId;
+          if (brandId) upd.brandId = brandId;
+          await prisma.product.update({ where: { id: existing.id }, data: upd });
           results.updated++;
         } else {
           const slug = ensureUniqueSlug(slugify(sp.name) || ('product-' + sp.id), slugSet);
-          const createData: any = {
-            name: sp.name, slug, sku: sp.sku || null, price: Number(sp.selling_price ?? 0),
-            stock: stockQty, active: sp.active ?? true, sourceId: String(sp.id),
-            sourceApi: 'stockba', images: images ?? '[]',
-          };
-          if (sp.purchase_price != null) createData.cost = Number(sp.purchase_price);
-          if (categoryId) createData.categoryId = categoryId;
-          if (brandId) createData.brandId = brandId;
-          await prisma.product.create({ data: createData });
+          const d: any = { name: sp.name, slug, sku: sp.sku || null, price: Number(sp.selling_price ?? 0), stock: stockQty, active: sp.active ?? true, sourceId: String(sp.id), sourceApi: 'stockba', images: images ?? '[]' };
+          if (sp.purchase_price != null) d.cost = Number(sp.purchase_price);
+          if (categoryId) d.categoryId = categoryId;
+          if (brandId) d.brandId = brandId;
+          await prisma.product.create({ data: d });
           results.created++;
         }
       } catch (err: any) {
