@@ -13,6 +13,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { useCart } from '@/store/cart';
+import { useCurrency } from '@/store/currency';
 import SearchBar from './SearchBar';
 
 interface MenuCategory {
@@ -54,10 +55,14 @@ export default function Header() {
   const totalItems = useCart((s) => s.totalItems);
   const totalPrice = useCart((s) => s.totalPrice);
 
-  const [logoText, setLogoText] = useState('ImpoTech');
-  const [logoAccent, setLogoAccent] = useState('Impo');
+  const [logoText, setLogoText] = useState('Ba Soluciones');
+  const [logoAccent, setLogoAccent] = useState('Ba');
   const [logoColor, setLogoColor] = useState('#e8850c');
   const [logoImageUrl, setLogoImageUrl] = useState('');
+
+  const currency = useCurrency((s) => s.currency);
+  const setCurrency = useCurrency((s) => s.setCurrency);
+  const formatCurrency = useCurrency((s) => s.format);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>(fallbackCategories);
   const [customMenuItems, setCustomMenuItems] = useState<CustomMenuItem[]>([]);
 
@@ -80,7 +85,7 @@ export default function Header() {
         if (data.logo_color) setLogoColor(data.logo_color);
         if (data.logo_image_url) setLogoImageUrl(data.logo_image_url);
       })
-      .catch(() => {});
+      .catch(() => { });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -143,6 +148,21 @@ export default function Header() {
 
           {/* Right actions */}
           <div className="hidden md:flex items-center gap-4">
+            {/* Selector de moneda */}
+            <div className="flex items-center bg-[#2a2a2a] rounded-full overflow-hidden text-[11px] font-bold border border-[#3a3a3a]">
+              <button
+                onClick={() => setCurrency('UYU')}
+                className={`px-2.5 py-1 transition-colors ${currency === 'UYU' ? 'bg-[#e8850c] text-white' : 'text-gray-400 hover:text-white'}`}
+              >
+                UYU
+              </button>
+              <button
+                onClick={() => setCurrency('USD')}
+                className={`px-2.5 py-1 transition-colors ${currency === 'USD' ? 'bg-[#e8850c] text-white' : 'text-gray-400 hover:text-white'}`}
+              >
+                USD
+              </button>
+            </div>
             {/* Favoritos */}
             <Link href="/favoritos" className="flex items-center gap-1 text-gray-300 hover:text-white transition-colors text-sm">
               <HeartIcon className="h-5 w-5" />
@@ -202,8 +222,8 @@ export default function Header() {
                 </span>
               </div>
               <div className="hidden sm:block text-right">
-                <div className="text-[10px] text-gray-400 leading-none">USD</div>
-                <div className="text-sm font-bold text-white leading-none">{cartTotal.toFixed(0)}</div>
+                <div className="text-[10px] text-gray-400 leading-none">{currency}</div>
+                <div className="text-sm font-bold text-white leading-none">{mounted ? formatCurrency(cartTotal) : '—'}</div>
               </div>
             </Link>
           </div>
@@ -289,7 +309,7 @@ export default function Header() {
             <ShoppingCartIcon className="h-5 w-5" />
             <span className="text-sm flex-1">Mi compra</span>
             <span className="bg-[#00d4aa] text-black text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{cartCount}</span>
-            <span className="font-bold text-sm">USD {cartTotal.toFixed(0)}</span>
+            <span className="font-bold text-sm">{mounted ? formatCurrency(cartTotal) : '—'}</span>
           </Link>
           {/* Categorías mobile */}
           <ul className="py-2">

@@ -7,7 +7,7 @@ interface Message { role: 'user' | 'model'; text: string; }
 export default function AIChat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'model', text: '¡Hola! Soy el asistente de ImpoTech. ¿En qué te puedo ayudar hoy?' },
+    { role: 'model', text: '¡Hola! Soy Lithink IA, el asistente de Ba Soluciones. ¿En qué te puedo ayudar hoy?' },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -67,8 +67,8 @@ export default function AIChat() {
           <div className="px-4 py-3 flex items-center gap-2" style={{ backgroundColor: '#1a8a7d' }}>
             <span className="text-xl">🤖</span>
             <div>
-              <p className="text-white font-semibold text-sm leading-none">Asistente IA</p>
-              <p className="text-teal-200 text-xs">Gemini 2.0 Flash</p>
+              <p className="text-white font-semibold text-sm leading-none">Lithink IA</p>
+              <p className="text-teal-200 text-xs">IA propia privada</p>
             </div>
           </div>
 
@@ -76,11 +76,10 @@ export default function AIChat() {
           <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                  m.role === 'user'
+                <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${m.role === 'user'
                     ? 'bg-[#1a8a7d] text-white rounded-br-sm'
                     : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-sm'
-                }`}>
+                  }`}>
                   {m.text}
                 </div>
               </div>

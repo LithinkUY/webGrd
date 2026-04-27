@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { formatPrice } from '@/lib/utils';
+import { useCurrency } from '@/store/currency';
 
 interface DBProduct {
   id: string;
@@ -28,6 +28,7 @@ function getFirstImage(images: string): string {
 
 function CarouselSection({ title, products }: { title: string; products: DBProduct[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const formatCurrency = useCurrency((s) => s.format);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -90,7 +91,7 @@ function CarouselSection({ title, products }: { title: string; products: DBProdu
             <span className="text-[10px] text-gray-300 font-mono mb-1">{p.sku}</span>
             {p.price > 0 && (
               <span className="text-[18px] font-bold text-gray-900 leading-none mb-2">
-                {formatPrice(p.price)}
+                {formatCurrency(p.price)}
               </span>
             )}
             <div className="mt-auto flex items-center justify-between">

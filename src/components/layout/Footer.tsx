@@ -12,14 +12,14 @@ interface FooterSettings {
 }
 
 const DEFAULTS: FooterSettings = {
-  logo_text: 'ImpoTech', logo_accent: 'Impo', logo_color: '#e8850c', logo_image_url: '',
+  logo_text: 'Ba Soluciones', logo_accent: 'Ba', logo_color: '#e8850c', logo_image_url: '',
   footer_desc: 'La tienda de insumos de tecnología con mayor servicio y variedad.',
   footer_phone1: '2929 0990', footer_phone2: '2924 9009',
-  footer_email: 'info@impotech.com.uy',
+  footer_email: 'info@basoluciones.com.uy',
   footer_hours: 'Lun. a Vie. de 9.30 a 12.30 y de 13.30 a 18.30 hs.',
   footer_address: 'Bacigalupi 2084 esq. Lima', footer_service: 'Lima 1668',
   footer_bank_info: 'BROU C. Corriente dólares Nº 1559417-00001 | SANTANDER C. Corriente dólares Nº 005100207330 | SCOTIABANK C. Corriente dólares Nº 2513484200 | ITAÚ C. Corriente dólares Nº 3304980 | HSBC C. Corriente dólares Nº 3298943-2 | PREX Card Nº cuenta dólares 90033713',
-  footer_copyright: 'ImpoTech',
+  footer_copyright: 'Ba Soluciones',
   footer_price_disclaimer: 'Los precios son en dólares americanos y no incluyen IVA.',
 };
 

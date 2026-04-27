@@ -9,8 +9,8 @@ import WhatsAppFloat from '@/components/layout/WhatsAppFloat';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'ImpoTech - Tecnología y Computación | Uruguay',
-  description: 'ImpoTech - Tu tienda de tecnología de confianza en Uruguay. Notebooks, monitores, periféricos, componentes y más con los mejores precios.',
+  title: 'Ba Soluciones - Tecnología y Computación | Uruguay',
+  description: 'Ba Soluciones - Tu tienda de tecnología de confianza en Uruguay. Notebooks, monitores, periféricos, componentes y más con los mejores precios.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

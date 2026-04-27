@@ -6,9 +6,9 @@ import toast from 'react-hot-toast';
 interface Setting { key: string; value: string }
 
 const defaultSettings: { key: string; label: string; type: string; group: string; placeholder?: string }[] = [
-  { key: 'site_name', label: 'Nombre del sitio', type: 'text', group: 'general', placeholder: 'ImpoTech' },
+  { key: 'site_name', label: 'Nombre del sitio', type: 'text', group: 'general', placeholder: 'Ba Soluciones' },
   { key: 'site_description', label: 'Descripción', type: 'text', group: 'general', placeholder: 'Tu tienda de tecnología' },
-  { key: 'site_email', label: 'Email de contacto', type: 'email', group: 'general', placeholder: 'info@impotech.com' },
+  { key: 'site_email', label: 'Email de contacto', type: 'email', group: 'general', placeholder: 'info@basoluciones.com' },
   { key: 'site_phone', label: 'Teléfono', type: 'text', group: 'general', placeholder: '+598 2XXX XXXX' },
   { key: 'site_address', label: 'Dirección', type: 'text', group: 'general', placeholder: 'Montevideo, Uruguay' },
   { key: 'site_whatsapp', label: 'WhatsApp', type: 'text', group: 'general', placeholder: '+59899123456' },
@@ -17,11 +17,11 @@ const defaultSettings: { key: string; label: string; type: string; group: string
   { key: 'shipping_cost', label: 'Costo envío estándar', type: 'number', group: 'comercio', placeholder: '5' },
   { key: 'free_shipping_min', label: 'Envío gratis desde (USD)', type: 'number', group: 'comercio', placeholder: '100' },
   { key: 'hide_prices', label: 'Ocultar precios (mostrar botón "Consultar")', type: 'toggle', group: 'comercio' },
-  { key: 'meta_title', label: 'Meta Title', type: 'text', group: 'seo', placeholder: 'ImpoTech - Tecnología al mejor precio' },
+  { key: 'meta_title', label: 'Meta Title', type: 'text', group: 'seo', placeholder: 'Ba Soluciones - Tecnología al mejor precio' },
   { key: 'meta_description', label: 'Meta Description', type: 'textarea', group: 'seo', placeholder: 'Tienda de tecnología con los mejores precios...' },
-  { key: 'facebook_url', label: 'Facebook', type: 'text', group: 'social', placeholder: 'https://facebook.com/impotech' },
-  { key: 'instagram_url', label: 'Instagram', type: 'text', group: 'social', placeholder: 'https://instagram.com/impotech' },
-  { key: 'twitter_url', label: 'Twitter / X', type: 'text', group: 'social', placeholder: 'https://x.com/impotech' },
+  { key: 'facebook_url', label: 'Facebook', type: 'text', group: 'social', placeholder: 'https://facebook.com/basoluciones' },
+  { key: 'instagram_url', label: 'Instagram', type: 'text', group: 'social', placeholder: 'https://instagram.com/basoluciones' },
+  { key: 'twitter_url', label: 'Twitter / X', type: 'text', group: 'social', placeholder: 'https://x.com/basoluciones' },
   { key: 'footer_desc', label: 'Descripción del footer', type: 'text', group: 'footer', placeholder: 'La tienda de insumos de tecnología...' },
   { key: 'footer_phone1', label: 'Teléfono 1', type: 'text', group: 'footer', placeholder: '2929 0990' },
   { key: 'footer_phone2', label: 'Teléfono 2', type: 'text', group: 'footer', placeholder: '2924 9009' },

@@ -29,7 +29,7 @@ export default function AparienciaPage() {
   const [loading, setLoading] = useState(true);
 
   // Identidad / Logo
-  const [logoText, setLogoText] = useState('ImpoTech');
+  const [logoText, setLogoText] = useState('Ba Soluciones');
   const [logoColor, setLogoColor] = useState('#e8850c');
   const [logoAccent, setLogoAccent] = useState('Impo');
   const [logoImageUrl, setLogoImageUrl] = useState('');
@@ -45,14 +45,14 @@ export default function AparienciaPage() {
   const [footerDesc, setFooterDesc] = useState('La tienda de insumos de tecnología con mayor servicio y variedad.');
   const [footerPhone1, setFooterPhone1] = useState('2929 0990');
   const [footerPhone2, setFooterPhone2] = useState('2924 9009');
-  const [footerEmail, setFooterEmail] = useState('info@impotech.com.uy');
+  const [footerEmail, setFooterEmail] = useState('info@basoluciones.com.uy');
   const [footerHours, setFooterHours] = useState('Lun. a Vie. de 9.30 a 12.30 y de 13.30 a 18.30 hs.');
   const [footerAddress, setFooterAddress] = useState('Bacigalupi 2084 esq. Lima');
   const [footerService, setFooterService] = useState('Lima 1668');
   const [footerBankInfo, setFooterBankInfo] = useState(
     'BROU Cta. Cte. USD 1559417-00001 | SANTANDER Cta. Cte. USD 005100207330 | SCOTIABANK Cta. Cte. USD 2513484200'
   );
-  const [footerCopyright, setFooterCopyright] = useState('ImpoTech');
+  const [footerCopyright, setFooterCopyright] = useState('Ba Soluciones');
 
   // Slider
   const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES);
@@ -267,7 +267,7 @@ export default function AparienciaPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Texto completo</label>
-                <input value={logoText} onChange={e => setLogoText(e.target.value)} className={inputClass} placeholder="ImpoTech" />
+                <input value={logoText} onChange={e => setLogoText(e.target.value)} className={inputClass} placeholder="Ba Soluciones" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Prefijo con color</label>
