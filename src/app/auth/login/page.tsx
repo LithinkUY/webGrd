@@ -24,7 +24,7 @@ export default function LoginPage() {
       // Verificar sesión para redirigir según el rol
       const sessionRes = await fetch('/api/auth/session');
       const session = await sessionRes.json();
-      if (session?.user?.role === 'admin') {
+      if (session?.user?.role === 'admin' || session?.user?.role === 'store_admin') {
         router.push('/admin');
       } else {
         router.push('/mi-cuenta');

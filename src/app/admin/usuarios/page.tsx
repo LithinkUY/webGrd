@@ -43,6 +43,11 @@ export default function AdminUsuarios() {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'customer' });
   const [saving, setSaving] = useState(false);
 
+  // Editar
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', company: '' });
+  const [editSaving, setEditSaving] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: '20' });
@@ -99,8 +104,8 @@ export default function AdminUsuarios() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar usuario?')) return;
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar al usuario "${name}"? Esta acción no se puede deshacer.`)) return;
     const res = await fetch('/api/admin/users', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -115,8 +120,77 @@ export default function AdminUsuarios() {
     }
   };
 
+  const openEdit = (u: User) => {
+    setEditUser(u);
+    setEditForm({ name: u.name, email: u.email, phone: u.phone || '', company: u.company || '' });
+  };
+
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    setEditSaving(true);
+    const res = await fetch(`/api/admin/users/${editUser.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    });
+    const data = await res.json();
+    if (data.user) {
+      toast.success('Usuario actualizado');
+      setEditUser(null);
+      load();
+    } else {
+      toast.error(data.error || 'Error');
+    }
+    setEditSaving(false);
+  };
+
   return (
     <div>
+      {/* Modal editar usuario */}
+      {editUser && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-800">Editar Usuario</h2>
+              <button onClick={() => setEditUser(null)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">✕</button>
+            </div>
+            <form onSubmit={handleEditSave} className="space-y-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Nombre</label>
+                <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                  required className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Email</label>
+                <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                  required className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Teléfono</label>
+                <input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Empresa</label>
+                <input value={editForm.company} onChange={e => setEditForm({ ...editForm, company: e.target.value })}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={editSaving}
+                  className="flex-1 bg-[#e8850c] text-white py-2 rounded-lg text-sm font-semibold hover:bg-[#d47a0b] disabled:opacity-50 transition-colors">
+                  {editSaving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+                <button type="button" onClick={() => setEditUser(null)}
+                  className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Usuarios</h1>
@@ -219,10 +293,16 @@ export default function AdminUsuarios() {
                   </td>
                   <td className="p-4 text-gray-500 text-xs">{new Date(u.createdAt).toLocaleDateString('es-UY')}</td>
                   <td className="p-4 text-center">
-                    <button onClick={() => updateUser(u.id, { active: !u.active })}
-                      className="text-xs text-gray-500 hover:text-gray-700">
-                      {u.active ? 'Desactivar' : 'Activar'}
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => openEdit(u)}
+                        className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-2.5 py-1 rounded-lg font-medium transition-colors">
+                        ✏️ Editar
+                      </button>
+                      <button onClick={() => handleDelete(u.id, u.name)}
+                        className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2.5 py-1 rounded-lg font-medium transition-colors">
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
