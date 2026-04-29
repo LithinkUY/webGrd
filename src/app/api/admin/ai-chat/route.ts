@@ -13,7 +13,7 @@ Responde siempre en espanol de manera concisa y profesional.`;
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'admin') {
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'store_admin')) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface StoreConfig {
@@ -26,6 +28,8 @@ interface SystemStats {
 }
 
 export default function SuperAdminPage() {
+  const { data: session } = useSession();
+  const router = useRouter();
   const [config, setConfig] = useState<StoreConfig>({
     storeName: '', storeEmail: '', membershipStatus: 'active',
     membershipExpiry: '', maintenanceMode: false, storeActive: true,
@@ -35,6 +39,13 @@ export default function SuperAdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'membership' | 'system' | 'danger'>('general');
+
+  // Redirigir si no es admin completo
+  useEffect(() => {
+    if (session && session.user?.role !== 'admin') {
+      router.replace('/admin');
+    }
+  }, [session, router]);
 
   const loadConfig = useCallback(async () => {
     setLoading(true);

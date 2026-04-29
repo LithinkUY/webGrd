@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
 interface User {
@@ -17,11 +18,21 @@ interface User {
 
 const roleColors: Record<string, string> = {
   admin: 'bg-purple-100 text-purple-700',
+  store_admin: 'bg-orange-100 text-orange-700',
   staff: 'bg-blue-100 text-blue-700',
   customer: 'bg-gray-100 text-gray-600',
 };
 
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  store_admin: 'Admin Tienda',
+  staff: 'Staff',
+  customer: 'Cliente',
+};
+
 export default function AdminUsuarios() {
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === 'admin';
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -134,7 +145,8 @@ export default function AdminUsuarios() {
             <select name="role" value={form.role} onChange={handleChange} className="border rounded-lg px-3 py-2 text-sm">
               <option value="customer">Cliente</option>
               <option value="staff">Staff</option>
-              <option value="admin">Admin</option>
+              <option value="store_admin">Admin Tienda</option>
+              {isSuperAdmin && <option value="admin">Admin</option>}
             </select>
           </div>
           <button type="submit" disabled={saving} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors disabled:opacity-50">
@@ -155,7 +167,8 @@ export default function AdminUsuarios() {
           <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8850c]/30">
             <option value="">Todos</option>
-            <option value="admin">Admin</option>
+            {isSuperAdmin && <option value="admin">Admin</option>}
+            <option value="store_admin">Admin Tienda</option>
             <option value="staff">Staff</option>
             <option value="customer">Cliente</option>
           </select>
@@ -194,7 +207,8 @@ export default function AdminUsuarios() {
                       className={`text-xs font-medium rounded-full px-2 py-1 border-0 cursor-pointer ${roleColors[u.role] || 'bg-gray-100'}`}>
                       <option value="customer">Cliente</option>
                       <option value="staff">Staff</option>
-                      <option value="admin">Admin</option>
+                      <option value="store_admin">Admin Tienda</option>
+                      {isSuperAdmin && <option value="admin">Admin</option>}
                     </select>
                   </td>
                   <td className="p-4 text-center">

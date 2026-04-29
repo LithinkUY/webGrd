@@ -191,7 +191,7 @@ export default function Header() {
                       </div>
                       <Link href="/mi-cuenta" onClick={() => setUserMenuOpen(false)}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Mi cuenta</Link>
-                      {session.user.role === 'admin' && (
+                      {(session.user.role === 'admin' || session.user.role === 'store_admin') && (
                         <Link href="/admin" onClick={() => setUserMenuOpen(false)}
                           className="block px-4 py-2 text-sm text-[#e8850c] hover:bg-gray-50">Panel Admin</Link>
                       )}

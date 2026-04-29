@@ -6,7 +6,7 @@ import slugify from 'slugify';
 
 async function isAdmin() {
   const session = await getServerSession(authOptions);
-  return session?.user?.role === 'admin';
+  return session?.user?.role === 'admin' || session?.user?.role === 'store_admin';
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

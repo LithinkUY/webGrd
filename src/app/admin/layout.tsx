@@ -7,9 +7,11 @@ import AIChat from '@/components/admin/AIChat';
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== 'admin') {
+  if (!session || (session.user.role !== 'admin' && session.user.role !== 'store_admin')) {
     redirect('/auth/login');
   }
+
+  const isSuperAdmin = session.user.role === 'admin';
 
   const navSections = [
     {
@@ -66,7 +68,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       items: [
         { name: 'Usuarios', href: '/admin/usuarios', icon: '👥' },
         { name: 'Configuración', href: '/admin/configuracion', icon: '⚙️' },
-        { name: 'Super Admin', href: '/admin/super-admin', icon: '🛡️' },
+        ...(isSuperAdmin ? [{ name: 'Super Admin', href: '/admin/super-admin', icon: '🛡️' }] : []),
       ],
     },
   ];

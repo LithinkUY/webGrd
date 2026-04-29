@@ -53,3 +53,20 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/login',
   },
 };
+
+// Roles con acceso al panel admin (admin completo + admin de tienda)
+export const ADMIN_ROLES = ['admin', 'store_admin'] as const;
+export type AdminRole = (typeof ADMIN_ROLES)[number];
+
+// Verifica si el usuario puede acceder al panel admin (admin o store_admin)
+import { getServerSession } from 'next-auth';
+export async function isAdminUser(): Promise<boolean> {
+  const session = await getServerSession(authOptions);
+  return ADMIN_ROLES.includes(session?.user?.role as AdminRole);
+}
+
+// Verifica si el usuario es super admin (solo admin)
+export async function isSuperAdmin(): Promise<boolean> {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === 'admin';
+}

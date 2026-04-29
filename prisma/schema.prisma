@@ -14,7 +14,7 @@ model User {
   name          String
   email         String    @unique
   password      String
-  role          String    @default("customer") // customer | admin | staff
+  role          String    @default("customer") // customer | admin | store_admin | staff
   phone         String?
   company       String?
   rut           String?
