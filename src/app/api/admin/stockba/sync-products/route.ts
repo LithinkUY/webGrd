@@ -138,7 +138,9 @@ export async function POST(req: NextRequest) {
                 const { price, cost } = extractPrice(detail);
 
                 // ── Images ────────────────────────────────────────
-                const imageUrl = detail.image_url ?? sp.image_url;
+                // Ignorar la imagen default de Laravel (producto sin imagen real)
+                const rawImageUrl: string | null = detail.image_url ?? sp.image_url ?? null;
+                const imageUrl = rawImageUrl && !rawImageUrl.includes('default.png') ? rawImageUrl : null;
                 const images = syncImages && imageUrl ? JSON.stringify([imageUrl]) : undefined;
 
                 // ── SKU ───────────────────────────────────────────
