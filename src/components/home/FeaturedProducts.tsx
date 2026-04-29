@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
@@ -14,7 +14,7 @@ interface DBProduct {
   images: string;
   sku: string;
   brand?: { name: string } | null;
-  category?: { name: string } | null;
+  category?: { name: string; slug: string } | null;
 }
 
 function getFirstImage(images: string): string {
@@ -26,9 +26,27 @@ function getFirstImage(images: string): string {
   }
 }
 
-function CarouselSection({ title, products }: { title: string; products: DBProduct[] }) {
+function CarouselSection({
+  title,
+  categorySlug,
+  products,
+  hidePrices,
+  autoScroll,
+}: {
+  title: string;
+  categorySlug: string;
+  products: DBProduct[];
+  hidePrices: boolean;
+  autoScroll: boolean;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const formatCurrency = useCurrency((s) => s.format);
+  const isPaused = useRef(false);
+
+  // Drag-to-scroll
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragScrollLeft = useRef(0);
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
@@ -36,11 +54,57 @@ function CarouselSection({ title, products }: { title: string; products: DBProdu
     scrollRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
   };
 
+  // Auto-scroll
+  useEffect(() => {
+    if (!autoScroll) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const interval = setInterval(() => {
+      if (isPaused.current || isDragging.current) return;
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (el.scrollLeft >= maxScroll - 4) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: el.clientWidth * 0.5, behavior: 'smooth' });
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [autoScroll]);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrollRef.current) return;
+    isDragging.current = true;
+    dragStartX.current = e.pageX - scrollRef.current.offsetLeft;
+    dragScrollLeft.current = scrollRef.current.scrollLeft;
+    scrollRef.current.style.cursor = 'grabbing';
+    scrollRef.current.style.userSelect = 'none';
+  };
+
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging.current || !scrollRef.current) return;
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const delta = (x - dragStartX.current) * 1.5;
+    scrollRef.current.scrollLeft = dragScrollLeft.current - delta;
+  };
+
+  const onMouseUp = () => {
+    isDragging.current = false;
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = 'grab';
+      scrollRef.current.style.userSelect = '';
+    }
+  };
+
+  const catHref = `/productos?cat=${encodeURIComponent(categorySlug)}`;
+
   if (products.length === 0) return null;
 
   return (
     <section className="mb-6 max-w-[1400px] mx-auto px-4">
-      <div className="flex items-center justify-center mb-4">
+      <div className="flex items-center justify-between mb-4 px-1">
+        {/* Título + flechas */}
         <div className="flex items-center bg-[#3a3a3a] rounded-full overflow-hidden shadow-lg">
           <button
             onClick={() => scroll('left')}
@@ -49,9 +113,12 @@ function CarouselSection({ title, products }: { title: string; products: DBProdu
           >
             <ChevronLeftIcon className="w-5 h-5" />
           </button>
-          <h2 className="px-6 py-2 text-white font-semibold text-[15px] whitespace-nowrap tracking-wide">
+          <Link
+            href={catHref}
+            className="px-6 py-2 text-white font-semibold text-[15px] whitespace-nowrap tracking-wide hover:text-[#f0a040] transition-colors"
+          >
             {title}
-          </h2>
+          </Link>
           <button
             onClick={() => scroll('right')}
             className="px-4 py-2 text-white hover:bg-[#4a4a4a] transition-colors"
@@ -60,26 +127,41 @@ function CarouselSection({ title, products }: { title: string; products: DBProdu
             <ChevronRightIcon className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Ver más */}
+        <Link
+          href={catHref}
+          className="text-[12px] text-[#e8850c] hover:text-[#333] font-medium transition-colors whitespace-nowrap ml-3"
+        >
+          Ver más →
+        </Link>
       </div>
 
       <div
         ref={scrollRef}
         className="flex gap-3 overflow-x-auto scroll-smooth pb-2"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', cursor: 'grab' }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={() => { onMouseUp(); isPaused.current = false; }}
+        onMouseEnter={() => { isPaused.current = true; }}
       >
         {products.map((p) => (
           <Link
             key={p.id}
             href={`/productos/${p.slug}`}
+            draggable={false}
             className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[calc(16.666%-10px)] min-w-[160px] bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 p-3 flex flex-col"
           >
-            <div className="relative aspect-[4/3] mb-2">
+            <div className="relative aspect-[4/3] mb-2 pointer-events-none">
               <Image
                 src={getFirstImage(p.images)}
                 alt={p.name}
                 fill
                 className="object-contain"
                 sizes="200px"
+                draggable={false}
               />
             </div>
             {p.brand && (
@@ -89,17 +171,20 @@ function CarouselSection({ title, products }: { title: string; products: DBProdu
               {p.name}
             </h3>
             <span className="text-[10px] text-gray-300 font-mono mb-1">{p.sku}</span>
-            {p.price > 0 && (
+            {!hidePrices && p.price > 0 && (
               <span className="text-[18px] font-bold text-gray-900 leading-none mb-2">
                 {formatCurrency(p.price)}
               </span>
+            )}
+            {hidePrices && (
+              <span className="text-[11px] text-[#e8850c] font-medium mb-2">Consultar precio</span>
             )}
             <div className="mt-auto flex items-center justify-between">
               <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
                 En stock
               </span>
               <span className="bg-[#9e9e9e] hover:bg-[#757575] text-white text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors">
-                Comprar
+                {hidePrices ? 'Consultar' : 'Comprar'}
               </span>
             </div>
           </Link>
@@ -110,27 +195,51 @@ function CarouselSection({ title, products }: { title: string; products: DBProdu
 }
 
 export default function FeaturedProducts() {
-  const [sections, setSections] = useState<{ title: string; products: DBProduct[] }[]>([]);
+  const [sections, setSections] = useState<{ title: string; slug: string; products: DBProduct[] }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hidePrices, setHidePrices] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(false);
+
+  const loadSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/public/settings?keys=hide_prices,home_carousel_auto');
+      if (res.ok) {
+        const s = await res.json();
+        setHidePrices(s.hide_prices === 'true');
+        setAutoScroll(s.home_carousel_auto === 'true');
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
-    fetch('/api/products?limit=60&active=true')
+    loadSettings();
+    fetch('/api/products?limit=80&active=true')
       .then((r) => r.json())
       .then((data) => {
-        const products: DBProduct[] = data.products ?? [];
-        const map = new Map<string, DBProduct[]>();
+        const products: DBProduct[] = (data.products ?? []).filter((p: DBProduct) => {
+          try {
+            const arr = JSON.parse(p.images || '[]');
+            return Array.isArray(arr) && arr.length > 0;
+          } catch { return false; }
+        });
+        const map = new Map<string, { slug: string; products: DBProduct[] }>();
         products.forEach((p) => {
-          const cat = p.category?.name ?? 'Productos';
-          if (!map.has(cat)) map.set(cat, []);
-          map.get(cat)!.push(p);
+          const catName = p.category?.name ?? 'Productos';
+          const catSlug = p.category?.slug ?? 'productos';
+          if (!map.has(catName)) map.set(catName, { slug: catSlug, products: [] });
+          map.get(catName)!.products.push(p);
         });
         setSections(
-          Array.from(map.entries()).map(([title, prods]) => ({ title, products: prods }))
+          Array.from(map.entries()).map(([title, { slug, products: prods }]) => ({
+            title,
+            slug,
+            products: prods,
+          }))
         );
       })
       .catch(() => setSections([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [loadSettings]);
 
   if (loading) {
     return (
@@ -145,7 +254,14 @@ export default function FeaturedProducts() {
   return (
     <div className="bg-[#f5f5f5] py-6">
       {sections.map((s) => (
-        <CarouselSection key={s.title} title={s.title} products={s.products} />
+        <CarouselSection
+          key={s.title}
+          title={s.title}
+          categorySlug={s.slug}
+          products={s.products}
+          hidePrices={hidePrices}
+          autoScroll={autoScroll}
+        />
       ))}
     </div>
   );

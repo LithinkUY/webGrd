@@ -17,6 +17,7 @@ const defaultSettings: { key: string; label: string; type: string; group: string
   { key: 'shipping_cost', label: 'Costo envío estándar', type: 'number', group: 'comercio', placeholder: '5' },
   { key: 'free_shipping_min', label: 'Envío gratis desde (USD)', type: 'number', group: 'comercio', placeholder: '100' },
   { key: 'hide_prices', label: 'Ocultar precios (mostrar botón "Consultar")', type: 'toggle', group: 'comercio' },
+  { key: 'home_carousel_auto', label: 'Carruseles del home: avance automático', type: 'toggle', group: 'comercio' },
   { key: 'meta_title', label: 'Meta Title', type: 'text', group: 'seo', placeholder: 'Ba Soluciones - Tecnología al mejor precio' },
   { key: 'meta_description', label: 'Meta Description', type: 'textarea', group: 'seo', placeholder: 'Tienda de tecnología con los mejores precios...' },
   { key: 'facebook_url', label: 'Facebook', type: 'text', group: 'social', placeholder: 'https://facebook.com/basoluciones' },
