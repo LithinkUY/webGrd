@@ -38,7 +38,7 @@ function CarouselSection({
   products: DBProduct[];
   hidePrices: boolean;
   autoScroll: boolean;
-}) {
+  }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const formatCurrency = useCurrency((s) => s.format);
   const isPaused = useRef(false);
@@ -105,27 +105,29 @@ function CarouselSection({
     <section className="mb-6 max-w-[1400px] mx-auto px-4">
       <div className="flex items-center justify-between mb-4 px-1">
         {/* Título + flechas */}
-        <div className="flex items-center bg-[#3a3a3a] rounded-full overflow-hidden shadow-lg">
-          <button
-            onClick={() => scroll('left')}
-            className="px-4 py-2 text-white hover:bg-[#4a4a4a] transition-colors"
-            aria-label="Anterior"
-          >
-            <ChevronLeftIcon className="w-5 h-5" />
-          </button>
+        <div className="flex items-center gap-3">
           <Link
             href={catHref}
-            className="px-6 py-2 text-white font-semibold text-[15px] whitespace-nowrap tracking-wide hover:text-[#f0a040] transition-colors"
+            className="text-[15px] font-bold text-gray-800 uppercase tracking-wider hover:text-[#e8850c] transition-colors"
           >
             {title}
           </Link>
-          <button
-            onClick={() => scroll('right')}
-            className="px-4 py-2 text-white hover:bg-[#4a4a4a] transition-colors"
-            aria-label="Siguiente"
-          >
-            <ChevronRightIcon className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => scroll('left')}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-200 hover:bg-[#e8850c] hover:text-white text-gray-500 transition-colors"
+              aria-label="Anterior"
+            >
+              <ChevronLeftIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-200 hover:bg-[#e8850c] hover:text-white text-gray-500 transition-colors"
+              aria-label="Siguiente"
+            >
+              <ChevronRightIcon className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Ver más */}
@@ -213,29 +215,58 @@ export default function FeaturedProducts() {
 
   useEffect(() => {
     loadSettings();
-    fetch('/api/products?limit=80&active=true')
+
+    // 1. Traer categorías activas
+    fetch('/api/categories?active=true')
       .then((r) => r.json())
-      .then((data) => {
-        const products: DBProduct[] = (data.products ?? []).filter((p: DBProduct) => {
-          try {
-            const arr = JSON.parse(p.images || '[]');
-            return Array.isArray(arr) && arr.length > 0;
-          } catch { return false; }
-        });
-        const map = new Map<string, { slug: string; products: DBProduct[] }>();
-        products.forEach((p) => {
-          const catName = p.category?.name ?? 'Productos';
-          const catSlug = p.category?.slug ?? 'productos';
-          if (!map.has(catName)) map.set(catName, { slug: catSlug, products: [] });
-          map.get(catName)!.products.push(p);
-        });
-        setSections(
-          Array.from(map.entries()).map(([title, { slug, products: prods }]) => ({
-            title,
-            slug,
-            products: prods,
-          }))
+      .then(async (catData) => {
+        const categories: { id: string; name: string; slug: string }[] = Array.isArray(catData) ? catData : (catData.categories ?? []);
+        if (categories.length === 0) {
+          // fallback: cargar productos planos
+          const r = await fetch('/api/products?limit=200&active=true');
+          const d = await r.json();
+          const products: DBProduct[] = (d.products ?? []).filter((p: DBProduct) => {
+            try { return JSON.parse(p.images || '[]').length > 0; } catch { return false; }
+          });
+          const map = new Map<string, { slug: string; products: DBProduct[] }>();
+          products.forEach((p) => {
+            const catName = p.category?.name ?? 'Productos';
+            const catSlug = p.category?.slug ?? 'productos';
+            if (!map.has(catName)) map.set(catName, { slug: catSlug, products: [] });
+            map.get(catName)!.products.push(p);
+          });
+          setSections(Array.from(map.entries()).map(([title, { slug, products: prods }]) => ({ title, slug, products: prods })));
+          return;
+        }
+
+        // Aplanar: categorías padre + subcategorías (solo las que tienen productos)
+        const allCats: { id: string; name: string; slug: string }[] = [];
+        for (const cat of categories) {
+          const catCount = (cat as any)._count?.products ?? 1;
+          if (catCount > 0) allCats.push({ id: cat.id, name: cat.name, slug: cat.slug });
+          const children = (cat as any).children ?? [];
+          for (const child of children) {
+            const childCount = (child as any)._count?.products ?? 1;
+            if (childCount > 0) allCats.push({ id: child.id, name: child.name, slug: child.slug });
+          }
+        }
+
+        // 2. Para cada categoría cargar sus productos (máx 24)
+        const results = await Promise.all(
+          allCats.map(async (cat) => {
+            try {
+              const r = await fetch(`/api/products?category=${encodeURIComponent(cat.slug)}&limit=24&active=true`);
+              const d = await r.json();
+              const prods: DBProduct[] = (d.products ?? []).filter((p: DBProduct) => {
+                try { return JSON.parse(p.images || '[]').length > 0; } catch { return false; }
+              });
+              return { title: cat.name, slug: cat.slug, products: prods };
+            } catch {
+              return { title: cat.name, slug: cat.slug, products: [] };
+            }
+          })
         );
+        setSections(results.filter((s) => s.products.length > 0));
       })
       .catch(() => setSections([]))
       .finally(() => setLoading(false));
