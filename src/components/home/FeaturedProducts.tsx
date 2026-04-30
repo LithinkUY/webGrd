@@ -13,13 +13,15 @@ interface DBProduct {
   price: number;
   images: string;
   sku: string;
+  _firstImage?: string;
   brand?: { name: string } | null;
   category?: { name: string; slug: string } | null;
 }
 
-function getFirstImage(images: string): string {
+function getFirstImage(p: DBProduct): string {
+  if (p._firstImage) return p._firstImage;
   try {
-    const arr = JSON.parse(images);
+    const arr = JSON.parse(p.images);
     return Array.isArray(arr) && arr.length > 0 ? arr[0] : '/placeholder.png';
   } catch {
     return '/placeholder.png';
@@ -157,7 +159,7 @@ function CarouselSection({
           >
             <div className="relative aspect-[4/3] mb-2 pointer-events-none">
               <Image
-                src={getFirstImage(p.images)}
+                src={getFirstImage(p)}
                 alt={p.name}
                 fill
                 className="object-contain"
@@ -198,7 +200,6 @@ function CarouselSection({
 export default function FeaturedProducts() {
   const [sections, setSections] = useState<{ title: string; slug: string; products: DBProduct[] }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingCats, setLoadingCats] = useState(true); // sigue true mientras cargan secciones
   const [hidePrices, setHidePrices] = useState(false);
   const [autoScroll, setAutoScroll] = useState(false);
 
@@ -215,71 +216,14 @@ export default function FeaturedProducts() {
 
   useEffect(() => {
     loadSettings();
-
-    // 1. Traer categorías activas
-    fetch('/api/categories?active=true')
-      .then((r) => r.json())
-      .then(async (catData) => {
-        const categories: { id: string; name: string; slug: string }[] = Array.isArray(catData) ? catData : (catData.categories ?? []);
-        if (categories.length === 0) {
-          // fallback: cargar productos planos
-          const r = await fetch('/api/products?limit=200&active=true');
-          const d = await r.json();
-          const products: DBProduct[] = (d.products ?? []).filter((p: DBProduct) => {
-            try { return JSON.parse(p.images || '[]').length > 0; } catch { return false; }
-          });
-          const map = new Map<string, { slug: string; products: DBProduct[] }>();
-          products.forEach((p) => {
-            const catName = p.category?.name ?? 'Productos';
-            const catSlug = p.category?.slug ?? 'productos';
-            if (!map.has(catName)) map.set(catName, { slug: catSlug, products: [] });
-            map.get(catName)!.products.push(p);
-          });
-          setSections(Array.from(map.entries()).map(([title, { slug, products: prods }]) => ({ title, slug, products: prods })));
-          return;
-        }
-
-        // Aplanar: categorías padre + subcategorías (todas, sin filtrar por _count)
-        const allCats: { id: string; name: string; slug: string }[] = [];
-        const seen = new Set<string>();
-        for (const cat of categories) {
-          if (!seen.has(cat.slug)) { seen.add(cat.slug); allCats.push({ id: cat.id, name: cat.name, slug: cat.slug }); }
-          const children = (cat as any).children ?? [];
-          for (const child of children) {
-            if (!seen.has(child.slug)) { seen.add(child.slug); allCats.push({ id: child.id, name: child.name, slug: child.slug }); }
-          }
-        }
-
-        // 2. Para cada categoría cargar sus productos (máx 24) — carga progresiva
-        setLoading(false); // ocultar spinner principal, el contenido aparece progresivamente
-        let pending = allCats.length;
-        if (pending === 0) { setLoadingCats(false); return; }
-
-        for (const cat of allCats) {
-          fetch(`/api/products?category=${encodeURIComponent(cat.slug)}&limit=24&active=true`)
-            .then(r => r.json())
-            .then(d => {
-              const prods: DBProduct[] = (d.products ?? []).filter((p: DBProduct) => {
-                try { return JSON.parse(p.images || '[]').length > 0; } catch { return false; }
-              });
-              if (prods.length > 0) {
-                setSections(prev => {
-                  const key = cat.name.toLowerCase().trim();
-                  const idx = prev.findIndex(s => s.title.toLowerCase().trim() === key);
-                  if (idx >= 0) {
-                    const ids = new Set(prev[idx].products.map(p => p.id));
-                    const merged = [...prev[idx].products, ...prods.filter(p => !ids.has(p.id))];
-                    return prev.map((s, i) => i === idx ? { ...s, products: merged } : s);
-                  }
-                  return [...prev, { title: cat.name, slug: cat.slug, products: prods }];
-                });
-              }
-            })
-            .catch(() => { /* skip */ })
-            .finally(() => { pending--; if (pending <= 0) setLoadingCats(false); });
-        }
+    // Un solo endpoint que devuelve todas las secciones ya agrupadas
+    fetch('/api/public/home-sections')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setSections(data);
       })
-      .catch(() => { setSections([]); setLoading(false); setLoadingCats(false); });
+      .catch(() => setSections([]))
+      .finally(() => setLoading(false));
   }, [loadSettings]);
 
   if (loading) {
@@ -289,6 +233,8 @@ export default function FeaturedProducts() {
       </div>
     );
   }
+
+  if (sections.length === 0) return null;
 
   return (
     <div className="bg-[#f5f5f5] py-6">
@@ -302,9 +248,6 @@ export default function FeaturedProducts() {
           autoScroll={autoScroll}
         />
       ))}
-      {loadingCats && sections.length === 0 && (
-        <div className="text-center text-gray-400 text-sm py-8">Cargando categorías…</div>
-      )}
     </div>
   );
 }
