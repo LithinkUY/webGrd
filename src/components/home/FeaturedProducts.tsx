@@ -198,6 +198,7 @@ function CarouselSection({
 export default function FeaturedProducts() {
   const [sections, setSections] = useState<{ title: string; slug: string; products: DBProduct[] }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingCats, setLoadingCats] = useState(true); // sigue true mientras cargan secciones
   const [hidePrices, setHidePrices] = useState(false);
   const [autoScroll, setAutoScroll] = useState(false);
 
@@ -250,7 +251,10 @@ export default function FeaturedProducts() {
         }
 
         // 2. Para cada categoría cargar sus productos (máx 24) — carga progresiva
-        setLoading(false); // mostrar página ya, las secciones van apareciendo
+        setLoading(false); // ocultar spinner principal, el contenido aparece progresivamente
+        let pending = allCats.length;
+        if (pending === 0) { setLoadingCats(false); return; }
+
         for (const cat of allCats) {
           fetch(`/api/products?category=${encodeURIComponent(cat.slug)}&limit=24&active=true`)
             .then(r => r.json())
@@ -258,23 +262,24 @@ export default function FeaturedProducts() {
               const prods: DBProduct[] = (d.products ?? []).filter((p: DBProduct) => {
                 try { return JSON.parse(p.images || '[]').length > 0; } catch { return false; }
               });
-              if (prods.length === 0) return;
-              setSections(prev => {
-                const key = cat.name.toLowerCase().trim();
-                const idx = prev.findIndex(s => s.title.toLowerCase().trim() === key);
-                if (idx >= 0) {
-                  // fusionar sin duplicados
-                  const ids = new Set(prev[idx].products.map(p => p.id));
-                  const merged = [...prev[idx].products, ...prods.filter(p => !ids.has(p.id))];
-                  return prev.map((s, i) => i === idx ? { ...s, products: merged } : s);
-                }
-                return [...prev, { title: cat.name, slug: cat.slug, products: prods }];
-              });
+              if (prods.length > 0) {
+                setSections(prev => {
+                  const key = cat.name.toLowerCase().trim();
+                  const idx = prev.findIndex(s => s.title.toLowerCase().trim() === key);
+                  if (idx >= 0) {
+                    const ids = new Set(prev[idx].products.map(p => p.id));
+                    const merged = [...prev[idx].products, ...prods.filter(p => !ids.has(p.id))];
+                    return prev.map((s, i) => i === idx ? { ...s, products: merged } : s);
+                  }
+                  return [...prev, { title: cat.name, slug: cat.slug, products: prods }];
+                });
+              }
             })
-            .catch(() => { /* skip */ });
+            .catch(() => { /* skip */ })
+            .finally(() => { pending--; if (pending <= 0) setLoadingCats(false); });
         }
       })
-      .catch(() => { setSections([]); setLoading(false); });
+      .catch(() => { setSections([]); setLoading(false); setLoadingCats(false); });
   }, [loadSettings]);
 
   if (loading) {
@@ -284,8 +289,6 @@ export default function FeaturedProducts() {
       </div>
     );
   }
-
-  if (sections.length === 0) return null;
 
   return (
     <div className="bg-[#f5f5f5] py-6">
@@ -299,6 +302,9 @@ export default function FeaturedProducts() {
           autoScroll={autoScroll}
         />
       ))}
+      {loadingCats && sections.length === 0 && (
+        <div className="text-center text-gray-400 text-sm py-8">Cargando categorías…</div>
+      )}
     </div>
   );
 }
