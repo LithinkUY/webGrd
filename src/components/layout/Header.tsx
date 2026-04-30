@@ -123,14 +123,14 @@ export default function Header() {
           </Link>
 
           {/* Search Bar con selector de categoría */}
-          <div className="hidden md:flex flex-1 max-w-2xl">
-            <div className="flex w-full rounded-full overflow-hidden shadow-sm">
+          <div className="hidden md:flex flex-1 max-w-2xl" style={{ overflow: 'visible' }}>
+            <div className="flex w-full shadow-sm" style={{ overflow: 'visible', borderRadius: '9999px' }}>
               {/* Selector categoría */}
               <div className="relative flex-shrink-0">
                 <select
                   value={searchCategory}
                   onChange={e => setSearchCategory(e.target.value)}
-                  className="appearance-none h-full bg-[#3a3a3a] text-white text-xs px-3 pr-7 border-r border-gray-600 cursor-pointer focus:outline-none"
+                  className="appearance-none h-full bg-[#3a3a3a] text-white text-xs px-3 pr-7 border-r border-gray-600 cursor-pointer focus:outline-none rounded-l-full"
                 >
                   <option value="all">Todas las categorías</option>
                   {menuCategories.map(c => (
@@ -140,7 +140,7 @@ export default function Header() {
                 <ChevronDownIcon className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white pointer-events-none" />
               </div>
               {/* Input búsqueda */}
-              <div className="flex-1 bg-white">
+              <div className="flex-1 bg-white" style={{ overflow: 'visible' }}>
                 <SearchBar categoryFilter={searchCategory !== 'all' ? searchCategory : undefined} />
               </div>
             </div>
