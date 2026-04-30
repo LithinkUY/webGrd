@@ -73,6 +73,7 @@ model MenuItem {
   label     String
   href      String
   icon      String?
+  location  String   @default("header")
   parentId  String?
   parent    MenuItem? @relation("MenuChildren", fields: [parentId], references: [id])
   children  MenuItem[] @relation("MenuChildren")

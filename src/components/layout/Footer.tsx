@@ -11,6 +11,8 @@ interface FooterSettings {
   footer_price_disclaimer: string;
 }
 
+interface NavItem { id: string; label: string; href: string; icon: string | null; openNew: boolean }
+
 const DEFAULTS: FooterSettings = {
   logo_text: 'Ba Soluciones', logo_accent: 'Ba', logo_color: '#e8850c', logo_image_url: '',
   footer_desc: 'La tienda de insumos de tecnología con mayor servicio y variedad.',
@@ -23,8 +25,41 @@ const DEFAULTS: FooterSettings = {
   footer_price_disclaimer: 'Los precios son en dólares americanos y no incluyen IVA.',
 };
 
+// Fallbacks hardcoded por si la DB está vacía
+const FALLBACK_NOSOTROS: NavItem[] = [
+  { id: '1', label: 'Compañía', href: '/empresa', icon: null, openNew: false },
+  { id: '2', label: 'Instalaciones', href: '/instalaciones', icon: null, openNew: false },
+  { id: '3', label: 'Noticias', href: '/noticias', icon: null, openNew: false },
+  { id: '4', label: 'Servicios', href: '/servicios', icon: null, openNew: false },
+  { id: '5', label: 'Trabaja con nosotros', href: '/trabaja-con-nosotros', icon: null, openNew: false },
+  { id: '6', label: 'Ubicación', href: '/ubicacion', icon: null, openNew: false },
+  { id: '7', label: 'Contacto', href: '/contacto', icon: null, openNew: false },
+];
+const FALLBACK_TIENDA: NavItem[] = [
+  { id: '1', label: 'Recién arribados', href: '/productos?new=true', icon: null, openNew: false },
+  { id: '2', label: 'Arribando (Reservas)', href: '/productos?category=arribando', icon: null, openNew: false },
+  { id: '3', label: 'Categorías', href: '/productos', icon: null, openNew: false },
+  { id: '4', label: 'Combos', href: '/productos?category=combos', icon: null, openNew: false },
+  { id: '5', label: 'Marcas', href: '/marcas', icon: null, openNew: false },
+];
+const FALLBACK_AYUDA: NavItem[] = [
+  { id: '1', label: '🏷️ OUTLET', href: '/productos?category=outlet', icon: null, openNew: false },
+  { id: '2', label: 'Políticas de garantía', href: '/garantia', icon: null, openNew: false },
+  { id: '3', label: 'Políticas de ventas', href: '/politicas-de-ventas', icon: null, openNew: false },
+];
+
+async function fetchMenu(location: string): Promise<NavItem[]> {
+  const res = await fetch(`/api/public/menu?location=${location}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
 export default function Footer() {
   const [s, setS] = useState<FooterSettings>(DEFAULTS);
+  const [nosotros, setNosotros] = useState<NavItem[]>(FALLBACK_NOSOTROS);
+  const [tienda, setTienda] = useState<NavItem[]>(FALLBACK_TIENDA);
+  const [ayuda, setAyuda] = useState<NavItem[]>(FALLBACK_AYUDA);
 
   useEffect(() => {
     fetch('/api/public/settings?keys=logo_image_url,logo_text,logo_accent,logo_color,footer_desc,footer_phone1,footer_phone2,footer_email,footer_hours,footer_address,footer_service,footer_bank_info,footer_copyright,footer_price_disclaimer')
@@ -39,6 +74,11 @@ export default function Footer() {
         }
       })
       .catch(() => { });
+
+    // Cargar menús del footer desde la DB
+    fetchMenu('footer_nosotros').then(items => { if (items.length > 0) setNosotros(items); });
+    fetchMenu('footer_tienda').then(items => { if (items.length > 0) setTienda(items); });
+    fetchMenu('footer_ayuda').then(items => { if (items.length > 0) setAyuda(items); });
   }, []);
 
   const logoRest = s.logo_text.slice(s.logo_accent.length);
@@ -86,23 +126,29 @@ export default function Footer() {
             <div>
               <h4 className="text-[13px] font-semibold text-gray-300 mb-3 uppercase tracking-wider">Nosotros</h4>
               <ul className="space-y-1.5 text-[13px] text-gray-400">
-                {[['Compañía', '/empresa'], ['Instalaciones', '/instalaciones'], ['Noticias', '/noticias'], ['Servicios', '/servicios'], ['Trabaja con nosotros', '/trabaja-con-nosotros'], ['Ubicación', '/ubicacion'], ['Contacto', '/contacto']].map(([label, href]) => (
-                  <li key={href}><Link href={href} className="hover:text-white transition-colors">{label}</Link></li>
+                {nosotros.map(item => (
+                  <li key={item.id}>
+                    <Link href={item.href} target={item.openNew ? '_blank' : undefined} className="hover:text-white transition-colors">{item.label}</Link>
+                  </li>
                 ))}
               </ul>
             </div>
             <div>
               <h4 className="text-[13px] font-semibold text-gray-300 mb-3 uppercase tracking-wider">Tienda</h4>
               <ul className="space-y-1.5 text-[13px] text-gray-400 mb-4">
-                {[['Recién arribados', '/productos?new=true'], ['Arribando (Reservas)', '/productos?category=arribando'], ['Categorías', '/productos'], ['Combos', '/productos?category=combos'], ['Marcas', '/marcas']].map(([label, href]) => (
-                  <li key={href}><Link href={href} className="hover:text-white transition-colors">{label}</Link></li>
+                {tienda.map(item => (
+                  <li key={item.id}>
+                    <Link href={item.href} target={item.openNew ? '_blank' : undefined} className="hover:text-white transition-colors">{item.label}</Link>
+                  </li>
                 ))}
               </ul>
               <h4 className="text-[13px] font-semibold text-gray-300 mb-2 uppercase tracking-wider">Ayuda</h4>
               <ul className="space-y-1.5 text-[13px] text-gray-400">
-                <li><Link href="/productos?category=outlet" className="text-[#d43b2f] hover:text-white transition-colors font-semibold">🏷️ OUTLET</Link></li>
-                <li><Link href="/garantia" className="hover:text-white transition-colors">Políticas de garantía</Link></li>
-                <li><Link href="/politicas-de-ventas" className="hover:text-white transition-colors">Políticas de ventas</Link></li>
+                {ayuda.map(item => (
+                  <li key={item.id}>
+                    <Link href={item.href} target={item.openNew ? '_blank' : undefined} className="hover:text-white transition-colors">{item.label}</Link>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

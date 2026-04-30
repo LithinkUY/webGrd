@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
         label: body.label,
         href: body.href,
         icon: body.icon || null,
+        location: body.location || 'header',
         parentId: body.parentId || null,
         sortOrder: body.sortOrder || 0,
         active: body.active !== false,

@@ -8,11 +8,11 @@ async function isAdmin() {
   return session?.user?.role === 'admin' || session?.user?.role === 'store_admin';
 }
 
-// GET — traer categorías con sus campos de menú + items custom
+// GET — traer categorías con sus campos de menú + items custom + items footer
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
-  const [categories, menuItems] = await Promise.all([
+  const [categories, menuItems, footerItems] = await Promise.all([
     prisma.category.findMany({
       where: { active: true },
       include: {
@@ -26,15 +26,17 @@ export async function GET() {
       orderBy: { menuOrder: 'asc' },
     }),
     prisma.menuItem.findMany({
-      include: {
-        children: { orderBy: { sortOrder: 'asc' } },
-      },
-      where: { parentId: null },
+      include: { children: { orderBy: { sortOrder: 'asc' } } },
+      where: { parentId: null, location: 'header' },
       orderBy: { sortOrder: 'asc' },
+    }),
+    prisma.menuItem.findMany({
+      where: { parentId: null, location: { in: ['footer_nosotros', 'footer_tienda', 'footer_ayuda'] } },
+      orderBy: [{ location: 'asc' }, { sortOrder: 'asc' }],
     }),
   ]);
 
-  return NextResponse.json({ categories, menuItems });
+  return NextResponse.json({ categories, menuItems, footerItems });
 }
 
 // PUT — actualizar visibilidad y orden de categorías en el menú
