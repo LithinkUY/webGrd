@@ -38,7 +38,7 @@ function CarouselSection({
   products: DBProduct[];
   hidePrices: boolean;
   autoScroll: boolean;
-  }) {
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const formatCurrency = useCurrency((s) => s.format);
   const isPaused = useRef(false);
@@ -102,41 +102,40 @@ function CarouselSection({
   if (products.length === 0) return null;
 
   return (
-    <section className="mb-6 max-w-[1400px] mx-auto px-4">
-      <div className="flex items-center justify-between mb-4 px-1">
-        {/* Título + flechas */}
-        <div className="flex items-center gap-3">
-          <Link
-            href={catHref}
-            className="text-[15px] font-bold text-gray-800 uppercase tracking-wider hover:text-[#e8850c] transition-colors"
-          >
-            {title}
-          </Link>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => scroll('left')}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-200 hover:bg-[#e8850c] hover:text-white text-gray-500 transition-colors"
-              aria-label="Anterior"
-            >
-              <ChevronLeftIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-200 hover:bg-[#e8850c] hover:text-white text-gray-500 transition-colors"
-              aria-label="Siguiente"
-            >
-              <ChevronRightIcon className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Ver más */}
+    <section className="mb-8 max-w-[1400px] mx-auto px-4">
+      {/* Cabecera: flecha | TÍTULO CENTRADO | flecha — y "Ver más" a la derecha */}
+      <div className="relative flex items-center justify-center mb-4">
+        {/* Ver más — absoluto a la derecha */}
         <Link
           href={catHref}
-          className="text-[12px] text-[#e8850c] hover:text-[#333] font-medium transition-colors whitespace-nowrap ml-3"
+          className="absolute right-0 text-[12px] text-[#e8850c] hover:text-[#333] font-medium transition-colors whitespace-nowrap"
         >
           Ver más →
         </Link>
+
+        {/* Pill centrado con flechas + título */}
+        <div className="flex items-center bg-[#2a2a2a] border-2 border-black rounded-full overflow-hidden shadow-lg">
+          <button
+            onClick={() => scroll('left')}
+            className="px-4 py-2 text-white hover:bg-[#444] transition-colors"
+            aria-label="Anterior"
+          >
+            <ChevronLeftIcon className="w-4 h-4" />
+          </button>
+          <Link
+            href={catHref}
+            className="px-5 py-2 text-white font-bold text-[13px] uppercase tracking-widest whitespace-nowrap hover:text-[#f0a040] transition-colors"
+          >
+            {title}
+          </Link>
+          <button
+            onClick={() => scroll('right')}
+            className="px-4 py-2 text-white hover:bg-[#444] transition-colors"
+            aria-label="Siguiente"
+          >
+            <ChevronRightIcon className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div
@@ -154,7 +153,7 @@ function CarouselSection({
             key={p.id}
             href={`/productos/${p.slug}`}
             draggable={false}
-            className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[calc(16.666%-10px)] min-w-[160px] bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 p-3 flex flex-col"
+            className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[calc(25%-9px)] min-w-[200px] bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 p-3 flex flex-col"
           >
             <div className="relative aspect-[4/3] mb-2 pointer-events-none">
               <Image
@@ -266,7 +265,22 @@ export default function FeaturedProducts() {
             }
           })
         );
-        setSections(results.filter((s) => s.products.length > 0));
+        // Deduplicar por nombre (unifica subcategorías con mismo nombre, ej: dos "Vidrio Templado")
+        const nameMap = new Map<string, { title: string; slug: string; products: DBProduct[] }>();
+        for (const r of results.filter((s) => s.products.length > 0)) {
+          const key = r.title.toLowerCase().trim();
+          if (!nameMap.has(key)) {
+            nameMap.set(key, { ...r });
+          } else {
+            // Unir productos evitando duplicados por id
+            const existing = nameMap.get(key)!;
+            const ids = new Set(existing.products.map((p) => p.id));
+            for (const p of r.products) {
+              if (!ids.has(p.id)) { existing.products.push(p); ids.add(p.id); }
+            }
+          }
+        }
+        setSections(Array.from(nameMap.values()));
       })
       .catch(() => setSections([]))
       .finally(() => setLoading(false));
