@@ -50,11 +50,18 @@ export default function SearchBar({ categoryFilter }: { categoryFilter?: string 
       if (res.ok) {
         const data = await res.json();
         setResults(data);
-        setOpen(data.length > 0);
+        setOpen(true); // siempre abrir para mostrar resultados o "sin resultados"
         setActiveIndex(-1);
+      } else {
+        setResults([]);
+        setOpen(true);
       }
-    } catch { /* empty */ }
-    setLoading(false);
+    } catch {
+      setResults([]);
+      setOpen(false);
+    } finally {
+      setLoading(false);
+    }
   }, [categoryFilter]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,9 +140,15 @@ export default function SearchBar({ categoryFilter }: { categoryFilter?: string 
       </div>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-[100] overflow-hidden" style={{ maxHeight: '480px' }}>
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 z-[200] overflow-hidden" style={{ maxHeight: '480px' }}>
           <div className="overflow-y-auto" style={{ maxHeight: '420px' }}>
-            {results.map((item, index) => {
+            {results.length === 0 ? (
+              <div className="px-4 py-8 text-center text-gray-400 text-[13px]">
+                <span className="text-2xl block mb-2">🔍</span>
+                No se encontraron productos para <strong className="text-gray-600">&quot;{query}&quot;</strong>
+              </div>
+            ) : (
+              results.map((item, index) => {
               const discount = item.comparePrice && item.comparePrice > item.price
                 ? Math.round(((item.comparePrice - item.price) / item.comparePrice) * 100)
                 : 0;
@@ -174,7 +187,7 @@ export default function SearchBar({ categoryFilter }: { categoryFilter?: string 
                   </div>
                 </Link>
               );
-            })}
+            }))}
           </div>
           <button
             onClick={handleFullSearch}

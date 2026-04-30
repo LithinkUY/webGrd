@@ -238,52 +238,43 @@ export default function FeaturedProducts() {
           return;
         }
 
-        // Aplanar: categorías padre + subcategorías (solo las que tienen productos)
+        // Aplanar: categorías padre + subcategorías (todas, sin filtrar por _count)
         const allCats: { id: string; name: string; slug: string }[] = [];
+        const seen = new Set<string>();
         for (const cat of categories) {
-          const catCount = (cat as any)._count?.products ?? 1;
-          if (catCount > 0) allCats.push({ id: cat.id, name: cat.name, slug: cat.slug });
+          if (!seen.has(cat.slug)) { seen.add(cat.slug); allCats.push({ id: cat.id, name: cat.name, slug: cat.slug }); }
           const children = (cat as any).children ?? [];
           for (const child of children) {
-            const childCount = (child as any)._count?.products ?? 1;
-            if (childCount > 0) allCats.push({ id: child.id, name: child.name, slug: child.slug });
+            if (!seen.has(child.slug)) { seen.add(child.slug); allCats.push({ id: child.id, name: child.name, slug: child.slug }); }
           }
         }
 
-        // 2. Para cada categoría cargar sus productos (máx 24)
-        const results = await Promise.all(
-          allCats.map(async (cat) => {
-            try {
-              const r = await fetch(`/api/products?category=${encodeURIComponent(cat.slug)}&limit=24&active=true`);
-              const d = await r.json();
+        // 2. Para cada categoría cargar sus productos (máx 24) — carga progresiva
+        setLoading(false); // mostrar página ya, las secciones van apareciendo
+        for (const cat of allCats) {
+          fetch(`/api/products?category=${encodeURIComponent(cat.slug)}&limit=24&active=true`)
+            .then(r => r.json())
+            .then(d => {
               const prods: DBProduct[] = (d.products ?? []).filter((p: DBProduct) => {
                 try { return JSON.parse(p.images || '[]').length > 0; } catch { return false; }
               });
-              return { title: cat.name, slug: cat.slug, products: prods };
-            } catch {
-              return { title: cat.name, slug: cat.slug, products: [] };
-            }
-          })
-        );
-        // Deduplicar por nombre (unifica subcategorías con mismo nombre, ej: dos "Vidrio Templado")
-        const nameMap = new Map<string, { title: string; slug: string; products: DBProduct[] }>();
-        for (const r of results.filter((s) => s.products.length > 0)) {
-          const key = r.title.toLowerCase().trim();
-          if (!nameMap.has(key)) {
-            nameMap.set(key, { ...r });
-          } else {
-            // Unir productos evitando duplicados por id
-            const existing = nameMap.get(key)!;
-            const ids = new Set(existing.products.map((p) => p.id));
-            for (const p of r.products) {
-              if (!ids.has(p.id)) { existing.products.push(p); ids.add(p.id); }
-            }
-          }
+              if (prods.length === 0) return;
+              setSections(prev => {
+                const key = cat.name.toLowerCase().trim();
+                const idx = prev.findIndex(s => s.title.toLowerCase().trim() === key);
+                if (idx >= 0) {
+                  // fusionar sin duplicados
+                  const ids = new Set(prev[idx].products.map(p => p.id));
+                  const merged = [...prev[idx].products, ...prods.filter(p => !ids.has(p.id))];
+                  return prev.map((s, i) => i === idx ? { ...s, products: merged } : s);
+                }
+                return [...prev, { title: cat.name, slug: cat.slug, products: prods }];
+              });
+            })
+            .catch(() => { /* skip */ });
         }
-        setSections(Array.from(nameMap.values()));
       })
-      .catch(() => setSections([]))
-      .finally(() => setLoading(false));
+      .catch(() => { setSections([]); setLoading(false); });
   }, [loadSettings]);
 
   if (loading) {
