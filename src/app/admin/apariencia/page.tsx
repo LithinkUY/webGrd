@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 
 interface PayMethod { id: string; label: string; icon: string; enabled: boolean; desc: string; }
-interface Slide { image: string; link: string; alt: string; }
+interface Slide { image: string; link: string; alt: string; objectFit?: 'cover' | 'contain' | 'fill'; }
 
 const DEFAULT_METHODS: PayMethod[] = [
   { id: 'transferencia', label: 'Transferencia Bancaria', icon: '🏦', enabled: true, desc: 'Transferí a cualquiera de nuestras cuentas bancarias' },
@@ -56,7 +56,7 @@ export default function AparienciaPage() {
 
   // Slider
   const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES);
-  const [newSlide, setNewSlide] = useState<Slide>({ image: '', link: '/productos', alt: '' });
+  const [newSlide, setNewSlide] = useState<Slide>({ image: '', link: '/productos', alt: '', objectFit: 'cover' });
 
   // Métodos de pago
   const [methods, setMethods] = useState<PayMethod[]>(DEFAULT_METHODS);
@@ -94,7 +94,7 @@ export default function AparienciaPage() {
       if (s.color_accent) setColorAccent(s.color_accent);
       if (s.color_bg) setColorBg(s.color_bg);
       if (s.hero_slides) {
-        try { const p = JSON.parse(s.hero_slides); if (Array.isArray(p) && p.length) setSlides(p); } catch {}
+        try { const p = JSON.parse(s.hero_slides); if (Array.isArray(p) && p.length) setSlides(p); } catch { }
       }
       if (methodsData.methods?.length) setMethods(methodsData.methods);
     } catch { toast.error('Error cargando configuración'); }
@@ -382,14 +382,15 @@ export default function AparienciaPage() {
 
             <div className="space-y-3">
               {slides.map((slide, i) => (
-                <div key={i} className="border border-gray-200 rounded-xl p-3 flex items-center gap-3">
+                <div key={i} className="border border-gray-200 rounded-xl p-3 flex items-start gap-3">
                   {/* Preview de imagen */}
-                  <div className="w-20 h-12 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
+                  <div className="w-24 h-14 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200 relative">
                     {slide.image ? (
                       <img
                         src={slide.image}
                         alt={slide.alt}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full"
+                        style={{ objectFit: slide.objectFit || 'cover' }}
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
                     ) : (
@@ -405,18 +406,56 @@ export default function AparienciaPage() {
                       placeholder="Nombre del slide"
                       className="w-full border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#e8850c]"
                     />
-                    <input
-                      value={slide.image}
-                      onChange={e => setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, image: e.target.value } : s))}
-                      placeholder="URL de imagen (ej: /banners/mi-banner.jpg)"
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#e8850c]"
-                    />
-                    <input
-                      value={slide.link}
-                      onChange={e => setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, link: e.target.value } : s))}
-                      placeholder="Link al hacer clic (ej: /productos?brand=lexar)"
-                      className="w-full border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#e8850c]"
-                    />
+                    {/* Imagen: URL + Upload */}
+                    <div className="flex gap-1.5 items-center">
+                      <input
+                        value={slide.image}
+                        onChange={e => setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, image: e.target.value } : s))}
+                        placeholder="/banners/mi-banner.jpg o https://..."
+                        className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#e8850c]"
+                      />
+                      <label className="cursor-pointer flex items-center gap-1 bg-blue-50 border border-blue-200 hover:border-blue-400 text-blue-700 text-[11px] font-medium px-2 py-1 rounded transition-colors whitespace-nowrap">
+                        📁 Subir
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const fd = new FormData();
+                            fd.append('file', file);
+                            try {
+                              const res = await fetch('/api/admin/upload-banner', { method: 'POST', body: fd });
+                              const data = await res.json();
+                              if (data.url) {
+                                setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, image: data.url } : s));
+                                toast.success('Imagen subida');
+                              } else { toast.error(data.error || 'Error al subir'); }
+                            } catch { toast.error('Error al subir imagen'); }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {/* Link + objectFit */}
+                    <div className="flex gap-1.5">
+                      <input
+                        value={slide.link}
+                        onChange={e => setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, link: e.target.value } : s))}
+                        placeholder="/productos?brand=lexar"
+                        className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#e8850c]"
+                      />
+                      <select
+                        value={slide.objectFit || 'cover'}
+                        onChange={e => setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, objectFit: e.target.value as any } : s))}
+                        className="border border-gray-200 rounded px-2 py-1 text-xs focus:outline-none"
+                        title="Ajuste de imagen"
+                      >
+                        <option value="cover">Recortar (cover)</option>
+                        <option value="contain">Encajar completa (contain)</option>
+                        <option value="fill">Estirar (fill)</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Controles */}
@@ -443,21 +482,58 @@ export default function AparienciaPage() {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500">URL de imagen</label>
-                <input
-                  value={newSlide.image}
-                  onChange={e => setNewSlide(p => ({ ...p, image: e.target.value }))}
-                  className={inputClass} placeholder="/banners/mi-imagen.jpg o https://..."
-                />
-                <p className="text-[11px] text-gray-400 mt-0.5">Subí la imagen a <code>/public/banners/</code> o usá una URL externa</p>
+                <label className="text-xs text-gray-500">Imagen del slide</label>
+                <div className="flex gap-1.5 items-center mt-0.5">
+                  <input
+                    value={newSlide.image}
+                    onChange={e => setNewSlide(p => ({ ...p, image: e.target.value }))}
+                    className={`${inputClass} flex-1`} placeholder="/banners/mi-imagen.jpg o https://..."
+                  />
+                  <label className="cursor-pointer flex items-center gap-1 bg-blue-50 border border-blue-200 hover:border-blue-400 text-blue-700 text-[11px] font-medium px-2 py-1 rounded transition-colors whitespace-nowrap">
+                    📁 Subir
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        try {
+                          const res = await fetch('/api/admin/upload-banner', { method: 'POST', body: fd });
+                          const data = await res.json();
+                          if (data.url) {
+                            setNewSlide(p => ({ ...p, image: data.url }));
+                            toast.success('Imagen subida');
+                          } else { toast.error(data.error || 'Error al subir'); }
+                        } catch { toast.error('Error al subir imagen'); }
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
-              <div>
-                <label className="text-xs text-gray-500">Link al hacer clic</label>
-                <input
-                  value={newSlide.link}
-                  onChange={e => setNewSlide(p => ({ ...p, link: e.target.value }))}
-                  className={inputClass} placeholder="/productos?brand=lexar"
-                />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500">Link al hacer clic</label>
+                  <input
+                    value={newSlide.link}
+                    onChange={e => setNewSlide(p => ({ ...p, link: e.target.value }))}
+                    className={inputClass} placeholder="/productos?brand=lexar"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Ajuste imagen</label>
+                  <select
+                    value={newSlide.objectFit || 'cover'}
+                    onChange={e => setNewSlide(p => ({ ...p, objectFit: e.target.value as any }))}
+                    className="border border-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none w-full"
+                  >
+                    <option value="cover">Recortar (cover)</option>
+                    <option value="contain">Encajar completa (contain)</option>
+                    <option value="fill">Estirar (fill)</option>
+                  </select>
+                </div>
               </div>
               <button onClick={addSlide} className="w-full mt-1 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 transition-colors">
                 + Agregar slide
@@ -476,6 +552,13 @@ export default function AparienciaPage() {
       {/* ── TAB: FOOTER ── */}
       {tab === 'footer' && (
         <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 items-start">
+            <span className="text-blue-500 text-lg mt-0.5">🔗</span>
+            <div className="text-sm text-blue-800">
+              <p className="font-semibold mb-0.5">¿Dónde editar los enlaces del footer?</p>
+              <p className="text-blue-700 text-xs">Los enlaces de navegación del footer (Nosotros, Tienda, Ayuda, etc.) se configuran en <a href="/admin/menu" className="underline font-medium hover:text-blue-900">Admin → Menú</a>, en la pestaña <strong>🔻 Footer</strong>.</p>
+            </div>
+          </div>
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="font-bold text-sm text-gray-800 mb-4">📝 Descripción</h2>
             <textarea value={footerDesc} onChange={e => setFooterDesc(e.target.value)} rows={2} className={inputClass} />

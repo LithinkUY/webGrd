@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-interface Slide { image: string; link: string; alt: string; }
+interface Slide { image: string; link: string; alt: string; objectFit?: 'cover' | 'contain' | 'fill'; }
 
 const FALLBACK_SLIDES: Slide[] = [
   { image: '/banners/presentaciones0_7579.jpg', link: '/productos?brand=asano', alt: 'Asano' },
@@ -58,7 +58,7 @@ export default function HeroBanner() {
                 src={slide.image}
                 alt={slide.alt}
                 fill
-                className="object-cover object-top"
+                className={`${slide.objectFit === 'contain' ? 'object-contain' : slide.objectFit === 'fill' ? 'object-fill' : 'object-cover'} object-top`}
                 sizes="100vw"
                 priority={i === 0}
               />
