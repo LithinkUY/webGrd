@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     ],
     unoptimized: true,
   },
+  experimental: {
+    // Aumentar memoria del worker para evitar SIGSEGV en builds grandes
+    workerThreads: false,
+  },
 };
 
 export default nextConfig;
