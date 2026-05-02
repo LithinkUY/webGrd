@@ -3,8 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShoppingCartIcon, HeartIcon } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
+import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { useCart, CartProduct } from '@/store/cart';
 import { useCurrency } from '@/store/currency';
 import { useSession } from 'next-auth/react';
@@ -24,17 +23,17 @@ interface ProductCardProps {
     isNew: boolean;
     featured: boolean;
     description?: string | null;
+    shortDesc?: string | null;
     category?: { name: string } | null;
     brand?: { name: string } | null;
+    currency?: string | null;
   };
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
   const addItem = useCart((s) => s.addItem);
-  const formatCurrency = useCurrency((s) => s.format);
+  const { format, currency: displayCurrency } = useCurrency();
   const [qty, setQty] = useState(1);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -55,22 +54,18 @@ export default function ProductCard({ product }: ProductCardProps) {
   try { images = JSON.parse(product.images || '[]'); } catch { }
   const mainImage = images[0] || null;
 
+  const productCurrency = (product.currency || 'USD') as 'USD' | 'UYU';
+
   const discount = product.comparePrice && product.comparePrice > product.price
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (product.stock <= 0) return;
     const cartProduct: CartProduct = {
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      image: mainImage || '',
-      sku: product.sku,
-      stock: product.stock,
+      id: product.id, name: product.name, slug: product.slug,
+      price: product.price, image: mainImage || '', sku: product.sku, stock: product.stock,
     };
     for (let i = 0; i < qty; i++) addItem(cartProduct);
     toast.success(`${qty > 1 ? qty + 'x ' : ''}Agregado al carrito`);
@@ -78,17 +73,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   const handleBuy = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (product.stock <= 0) return;
     const cartProduct: CartProduct = {
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      image: mainImage || '',
-      sku: product.sku,
-      stock: product.stock,
+      id: product.id, name: product.name, slug: product.slug,
+      price: product.price, image: mainImage || '', sku: product.sku, stock: product.stock,
     };
     for (let i = 0; i < qty; i++) addItem(cartProduct);
     router.push('/checkout');
@@ -97,40 +86,37 @@ export default function ProductCard({ product }: ProductCardProps) {
   const incQty = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setQty(q => Math.min(q + 1, product.stock || 99)); };
   const decQty = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setQty(q => Math.max(1, q - 1)); };
 
+  const priceLabel = format(product.price, productCurrency);
+  const comparePriceLabel = product.comparePrice ? format(product.comparePrice, productCurrency) : null;
+
+  // Separar el símbolo/prefijo del número para mostrarlo más grande
+  const priceParts = priceLabel.match(/^([^\d]*)(\d[\d.,\s]*)(.*)$/);
+  const pricePrefix = priceParts ? priceParts[1].trim() : '';
+  const priceNumber = priceParts ? priceParts[2].trim() : priceLabel;
+
   return (
-    <div
-      className="group bg-white rounded-lg border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1 flex flex-col"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Imagen */}
-      <div className="relative aspect-square bg-gray-50 p-3 flex items-center justify-center overflow-hidden">
+    <div className="group bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex flex-col overflow-hidden">
+      {/* ── Imagen ── */}
+      <div className="relative bg-white" style={{ paddingBottom: '75%' }}>
         {/* Badges */}
         {product.isNew && (
-          <span className="absolute top-2 left-2 z-10 bg-[#44aa44] text-white text-[9px] font-bold px-2 py-0.5 rounded">NUEVO</span>
+          <span className="absolute top-2 left-2 z-10 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">NUEVO</span>
         )}
         {discount > 0 && (
-          <span className="absolute top-2 right-8 z-10 bg-[#fe3439] text-white text-[9px] font-bold px-2 py-0.5 rounded">-{discount}%</span>
+          <span className="absolute top-2 right-2 z-10 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">-{discount}%</span>
         )}
-
-        {/* Favorito */}
-        <button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsFavorite(f => !f); }}
-          className="absolute top-2 right-2 z-10 w-7 h-7 bg-white rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform"
-        >
-          {isFavorite
-            ? <HeartSolid className="w-4 h-4 text-red-500" />
-            : <HeartIcon className="w-4 h-4 text-gray-400" />}
-        </button>
-
-        <Link href={`/productos/${product.slug}`} className="block w-full h-full absolute inset-0">
+        {product.stock <= 0 && (
+          <div className="absolute inset-0 z-10 bg-white/60 flex items-center justify-center">
+            <span className="text-[10px] font-bold text-red-500 bg-white/90 px-3 py-1 rounded-full border border-red-200">Sin stock</span>
+          </div>
+        )}
+        <Link href={`/productos/${product.slug}`} className="absolute inset-0">
           {mainImage ? (
             <Image
               src={mainImage}
               alt={product.name}
               fill
-              className="object-contain p-5 transition-transform duration-300"
-              style={{ transform: hovered ? 'scale(1.07)' : 'scale(1)' }}
+              className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             />
           ) : (
@@ -139,78 +125,84 @@ export default function ProductCard({ product }: ProductCardProps) {
         </Link>
       </div>
 
-      {/* Info */}
-      <div className="flex flex-col flex-1 p-3 border-t border-gray-100">
+      {/* ── Info ── */}
+      <div className="flex flex-col flex-1 p-3 gap-1">
+        {/* Marca */}
         {product.brand && (
-          <span className="text-[10px] text-gray-400 uppercase tracking-wide mb-0.5">{product.brand.name}</span>
+          <span className="text-[10px] text-gray-400 uppercase tracking-wide font-medium">{product.brand.name}</span>
         )}
+
+        {/* Nombre */}
         <Link href={`/productos/${product.slug}`}>
-          <h3 className="text-[12px] text-gray-800 leading-snug line-clamp-2 min-h-[2.5rem] font-semibold hover:text-[#e8850c] transition-colors">
+          <h3 className="text-[12px] text-gray-800 font-semibold leading-snug line-clamp-2 min-h-[2.5rem] hover:text-[#e8850c] transition-colors">
             {product.name}
           </h3>
         </Link>
 
-        <div className="mt-auto pt-2 space-y-2">
-          {/* Precio */}
-          <div>
-            {!hidePrices && product.comparePrice && product.comparePrice > product.price && (
-              <p className="text-[10px] text-gray-400 line-through">{formatCurrency(product.comparePrice)}</p>
-            )}
-            {hidePrices ? (
-              <a
-                href={`https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola! Me interesa el producto: ${product.name} (SKU: ${product.sku})`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={e => e.stopPropagation()}
-                className="inline-flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-full transition-colors"
-              >
-                💬 Consultar
-              </a>
-            ) : product.price > 0 ? (
-              <p className="text-gray-900 font-bold text-[20px] leading-none">
-                {formatCurrency(product.price)}
-              </p>
-            ) : (
-              <p className="text-[12px] text-gray-400 italic">
-                {session ? 'Consultar precio' : 'Regístrate para ver precios'}
-              </p>
-            )}
-          </div>
+        {/* Descripción corta */}
+        {(product.shortDesc || product.description) && (
+          <p className="text-[11px] text-gray-400 line-clamp-1 leading-tight">
+            {product.shortDesc || product.description}
+          </p>
+        )}
 
-          {/* Botones */}
-          {!hidePrices && product.stock > 0 && product.price > 0 ? (
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                {/* Qty */}
-                <div className="flex items-center border border-gray-200 rounded overflow-hidden">
-                  <button onClick={decQty} className="w-6 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-sm">−</button>
-                  <span className="w-6 text-center text-[12px] font-medium">{qty}</span>
-                  <button onClick={incQty} className="w-6 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-sm">+</button>
-                </div>
-                {/* Add to cart */}
-                <button
-                  onClick={handleAddToCart}
-                  className="flex items-center justify-center w-8 h-7 border border-[#e8850c] text-[#e8850c] rounded hover:bg-[#e8850c] hover:text-white transition-colors"
-                  title="Agregar al carrito"
-                >
-                  <ShoppingCartIcon className="h-4 w-4" />
-                </button>
-              </div>
-              <button
-                onClick={handleBuy}
-                className="w-full bg-[#9e9e9e] hover:bg-[#757575] text-white text-[11px] font-bold py-1.5 rounded flex items-center justify-center gap-1.5 transition-colors"
-              >
-                🛒 Comprar
-              </button>
+        {/* ── Precio ── */}
+        <div className="mt-auto pt-2">
+          {!hidePrices && comparePriceLabel && (
+            <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">{comparePriceLabel}</p>
+          )}
+
+          {hidePrices ? (
+            <a
+              href={`https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola! Me interesa: ${product.name} (SKU: ${product.sku})`)}`}
+              target="_blank" rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-full transition-colors"
+            >
+              💬 Consultar
+            </a>
+          ) : product.price > 0 ? (
+            <div className="flex items-baseline gap-1">
+              <span className="text-[11px] font-semibold text-gray-500 leading-none">{displayCurrency}</span>
+              <span className="text-[22px] font-bold text-gray-900 leading-none">{priceNumber}</span>
             </div>
           ) : (
-            <p className="text-[10px] text-red-500 font-medium">Sin stock</p>
+            <p className="text-[12px] text-gray-400 italic">
+              {session ? 'Consultar precio' : 'Regístrate para ver precio'}
+            </p>
           )}
         </div>
 
-        {/* SKU */}
-        <p className="mt-2 text-center text-[9px] text-gray-300 uppercase tracking-wide font-mono">{product.sku}</p>
+        {/* ── Botones ── */}
+        {!hidePrices && product.stock > 0 && product.price > 0 ? (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            {/* Qty */}
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden shrink-0">
+              <button onClick={decQty} className="w-6 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-sm">−</button>
+              <span className="w-5 text-center text-[11px] font-medium">{qty}</span>
+              <button onClick={incQty} className="w-6 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-sm">+</button>
+            </div>
+            {/* Add to cart */}
+            <button
+              onClick={handleAddToCart}
+              className="flex items-center justify-center w-8 h-7 border border-[#e8850c] text-[#e8850c] rounded-lg hover:bg-[#e8850c] hover:text-white transition-colors shrink-0"
+              title="Agregar al carrito"
+            >
+              <ShoppingCartIcon className="h-4 w-4" />
+            </button>
+            {/* Comprar */}
+            <button
+              onClick={handleBuy}
+              className="flex-1 bg-[#e8850c] hover:bg-[#d47a0b] text-white text-[11px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors"
+            >
+              🛒 Comprar
+            </button>
+          </div>
+        ) : product.stock <= 0 ? null : null}
       </div>
+
+      {/* SKU */}
+      <p className="text-center text-[9px] text-gray-300 uppercase tracking-wide font-mono pb-2 px-3">{product.sku}</p>
     </div>
   );
 }

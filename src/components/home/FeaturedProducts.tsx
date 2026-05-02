@@ -11,11 +11,15 @@ interface DBProduct {
   name: string;
   slug: string;
   price: number;
+  comparePrice?: number | null;
   images: string;
   sku: string;
+  shortDesc?: string | null;
+  description?: string | null;
   _firstImage?: string;
   brand?: { name: string } | null;
   category?: { name: string; slug: string } | null;
+  currency?: string | null;
 }
 
 function getFirstImage(p: DBProduct): string {
@@ -29,17 +33,14 @@ function getFirstImage(p: DBProduct): string {
 }
 
 function CarouselSection({
-  title,
-  categorySlug,
-  products,
-  hidePrices,
-  autoScroll,
+  title, categorySlug, products, hidePrices, autoScroll, firstSection = false,
 }: {
   title: string;
   categorySlug: string;
   products: DBProduct[];
   hidePrices: boolean;
   autoScroll: boolean;
+  firstSection?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const formatCurrency = useCurrency((s) => s.format);
@@ -104,7 +105,7 @@ function CarouselSection({
   if (products.length === 0) return null;
 
   return (
-    <section className="mb-8 max-w-[1400px] mx-auto px-4">
+    <section className={`mb-6 max-w-[1400px] mx-auto px-4 ${firstSection ? 'pt-4' : ''}`}>
       {/* Cabecera: flecha | TÍTULO CENTRADO | flecha — y "Ver más" a la derecha */}
       <div className="relative flex items-center justify-center mb-4">
         {/* Ver más — absoluto a la derecha */}
@@ -150,48 +151,81 @@ function CarouselSection({
         onMouseLeave={() => { onMouseUp(); isPaused.current = false; }}
         onMouseEnter={() => { isPaused.current = true; }}
       >
-        {products.map((p) => (
-          <Link
-            key={p.id}
-            href={`/productos/${p.slug}`}
-            draggable={false}
-            className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[calc(25%-9px)] min-w-[200px] bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 p-3 flex flex-col"
-          >
-            <div className="relative aspect-[4/3] mb-2 pointer-events-none">
-              <Image
-                src={getFirstImage(p)}
-                alt={p.name}
-                fill
-                className="object-contain"
-                sizes="200px"
-                draggable={false}
-              />
-            </div>
-            {p.brand && (
-              <span className="text-[10px] text-gray-400 uppercase tracking-wide">{p.brand.name}</span>
-            )}
-            <h3 className="text-[12px] text-gray-800 leading-tight line-clamp-2 min-h-[32px] mb-1 font-medium">
-              {p.name}
-            </h3>
-            <span className="text-[10px] text-gray-300 font-mono mb-1">{p.sku}</span>
-            {!hidePrices && p.price > 0 && (
-              <span className="text-[18px] font-bold text-gray-900 leading-none mb-2">
-                {formatCurrency(p.price)}
-              </span>
-            )}
-            {hidePrices && (
-              <span className="text-[11px] text-[#e8850c] font-medium mb-2">Consultar precio</span>
-            )}
-            <div className="mt-auto flex items-center justify-between">
-              <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
-                En stock
-              </span>
-              <span className="bg-[#9e9e9e] hover:bg-[#757575] text-white text-[11px] font-semibold px-3 py-1.5 rounded-full transition-colors">
-                {hidePrices ? 'Consultar' : 'Comprar'}
-              </span>
-            </div>
-          </Link>
-        ))}
+        {products.map((p) => {
+          const img = getFirstImage(p);
+          const productCurrency = (p.currency || 'USD') as 'USD' | 'UYU';
+          const priceLabel = !hidePrices && p.price > 0 ? formatCurrency(p.price, productCurrency) : null;
+          const priceParts = priceLabel ? priceLabel.match(/^([^\d]*)(\d[\d.,\s]*)(.*)$/) : null;
+          const pricePrefix = priceParts ? priceParts[1].trim() : '';
+          const priceNumber = priceParts ? priceParts[2].trim() : (priceLabel || '');
+
+          return (
+            <Link
+              key={p.id}
+              href={`/productos/${p.slug}`}
+              draggable={false}
+              className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(33.333%-8px)] md:w-[calc(25%-9px)] lg:w-[170px] min-w-[155px] bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-200 hover:-translate-y-1 flex flex-col overflow-hidden border border-gray-100"
+            >
+              {/* Imagen */}
+              <div className="relative bg-white" style={{ paddingBottom: '80%' }}>
+                {p.price > 0 && p.comparePrice && p.comparePrice > p.price && (
+                  <span className="absolute top-1.5 left-1.5 z-10 bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                    -{Math.round(((p.comparePrice - p.price) / p.comparePrice) * 100)}%
+                  </span>
+                )}
+                <div className="absolute inset-0 pointer-events-none">
+                  <Image
+                    src={img}
+                    alt={p.name}
+                    fill
+                    className="object-contain p-3 transition-transform duration-300 group-hover:scale-105"
+                    sizes="180px"
+                    draggable={false}
+                  />
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="flex flex-col flex-1 px-2.5 pt-2 pb-2 gap-0.5">
+                {p.brand && (
+                  <span className="text-[9px] text-gray-400 uppercase tracking-wide font-medium">{p.brand.name}</span>
+                )}
+                <h3 className="text-[11px] text-gray-800 font-semibold leading-snug line-clamp-2 min-h-[28px]">
+                  {p.name}
+                </h3>
+                {(p.shortDesc || p.description) && (
+                  <p className="text-[10px] text-gray-400 line-clamp-1 leading-tight">
+                    {p.shortDesc || p.description}
+                  </p>
+                )}
+
+                {/* Precio */}
+                <div className="mt-auto pt-1.5">
+                  {hidePrices ? (
+                    <span className="text-[11px] text-[#e8850c] font-semibold">Consultar precio</span>
+                  ) : p.price > 0 ? (
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-[10px] font-semibold text-gray-500 leading-none">{pricePrefix}</span>
+                      <span className="text-[18px] font-bold text-gray-900 leading-none">{priceNumber}</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-gray-400 italic">Consultar</span>
+                  )}
+                </div>
+
+                {/* Botón Comprar */}
+                <div className="mt-1.5">
+                  <span className="block w-full bg-[#e8850c] hover:bg-[#d47a0b] text-white text-[11px] font-bold py-1.5 rounded-lg text-center transition-colors">
+                    🛒 {hidePrices ? 'Consultar' : 'Comprar'}
+                  </span>
+                </div>
+              </div>
+
+              {/* SKU */}
+              <p className="text-center text-[8px] text-gray-300 uppercase tracking-wide font-mono pb-1.5 px-2">{p.sku}</p>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
@@ -237,8 +271,8 @@ export default function FeaturedProducts() {
   if (sections.length === 0) return null;
 
   return (
-    <div className="bg-[#f5f5f5] py-6">
-      {sections.map((s) => (
+    <div className="bg-[#f5f5f5] pt-0 pb-6 -mt-10 relative z-20">
+      {sections.map((s, idx) => (
         <CarouselSection
           key={s.title}
           title={s.title}
@@ -246,6 +280,7 @@ export default function FeaturedProducts() {
           products={s.products}
           hidePrices={hidePrices}
           autoScroll={autoScroll}
+          firstSection={idx === 0}
         />
       ))}
     </div>

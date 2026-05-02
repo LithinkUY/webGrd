@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 
 interface Category { id: string; name: string; parentId: string | null; children?: Category[] }
@@ -16,6 +17,7 @@ interface ProductData {
   price: string;
   comparePrice: string;
   cost: string;
+  currency: string;
   stock: string;
   minStock: string;
   categoryId: string;
@@ -34,7 +36,8 @@ interface ProductData {
 
 const emptyProduct: ProductData = {
   name: '', sku: '', barcode: '', description: '', shortDesc: '',
-  price: '', comparePrice: '', cost: '', stock: '0', minStock: '0',
+  price: '', comparePrice: '', cost: '', currency: 'USD',
+  stock: '0', minStock: '0',
   categoryId: '', brandId: '', typeId: '', images: '[]',
   featured: false, active: true, isNew: false,
   weight: '', dimensions: '', warranty: '', tags: '[]', specs: '',
@@ -47,6 +50,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImg, setUploadingImg] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -72,6 +76,7 @@ export default function ProductForm({ productId }: { productId?: string }) {
             categoryId: p.categoryId, brandId: p.brandId || '', typeId: p.typeId || '',
             images: p.images || '[]',
             featured: p.featured, active: p.active, isNew: p.isNew,
+            currency: p.currency || 'USD',
             weight: p.weight ? String(p.weight) : '',
             dimensions: p.dimensions || '', warranty: p.warranty || '',
             tags: p.tags || '[]', specs: p.specs || '',
@@ -195,15 +200,22 @@ export default function ProductForm({ productId }: { productId?: string }) {
             <h2 className="font-bold text-sm text-gray-800 mb-4 uppercase tracking-wider">Precios y Stock</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className={labelClass}>Precio USD *</label>
+                <label className={labelClass}>Moneda *</label>
+                <select value={data.currency} onChange={e => set('currency', e.target.value)} className={inputClass}>
+                  <option value="USD">💵 Dólares (USD)</option>
+                  <option value="UYU">🪙 Pesos (UYU)</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Precio ({data.currency}) *</label>
                 <input type="number" step="0.01" value={data.price} onChange={e => set('price', e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>Precio anterior</label>
+                <label className={labelClass}>Precio anterior ({data.currency})</label>
                 <input type="number" step="0.01" value={data.comparePrice} onChange={e => set('comparePrice', e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label className={labelClass}>Costo</label>
+                <label className={labelClass}>Costo ({data.currency})</label>
                 <input type="number" step="0.01" value={data.cost} onChange={e => set('cost', e.target.value)} className={inputClass} />
               </div>
               <div>
@@ -243,20 +255,103 @@ export default function ProductForm({ productId }: { productId?: string }) {
 
           {/* Imágenes */}
           <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="font-bold text-sm text-gray-800 mb-4 uppercase tracking-wider">Imágenes</h2>
-            <p className="text-xs text-gray-400 mb-2">URLs de imágenes separadas por línea</p>
-            <textarea
-              value={(() => { try { return JSON.parse(data.images).join('\n'); } catch { return ''; } })()}
-              onChange={e => set('images', JSON.stringify(e.target.value.split('\n').filter(Boolean)))}
-              rows={4} className={inputClass} placeholder="https://ejemplo.com/imagen1.jpg" />
-            {/* Preview */}
-            <div className="flex gap-2 mt-3 flex-wrap">
-              {(() => { try { return JSON.parse(data.images) as string[]; } catch { return []; } })().map((url, i) => (
-                <div key={i} className="w-16 h-16 rounded bg-gray-100 overflow-hidden">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                </div>
-              ))}
+            <h2 className="font-bold text-sm text-gray-800 mb-3 uppercase tracking-wider">Galería de Imágenes</h2>
+
+            {/* Upload de imágenes */}
+            <div className="mb-4">
+              <label className="cursor-pointer flex items-center gap-2 bg-blue-50 border-2 border-dashed border-blue-200 hover:border-blue-400 rounded-xl px-4 py-3 text-blue-700 text-sm font-medium transition-colors w-full justify-center">
+                {uploadingImg ? (
+                  <><span className="animate-spin">⏳</span> Subiendo...</>
+                ) : (
+                  <><span>📁</span> Subir imagen (PNG, JPG, WEBP — máx 8MB)</>
+                )}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                  className="hidden"
+                  multiple
+                  disabled={uploadingImg}
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (!files.length) return;
+                    setUploadingImg(true);
+                    const newUrls: string[] = [];
+                    for (const file of files) {
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      if (data.id) fd.append('productId', data.id);
+                      try {
+                        const res = await fetch('/api/admin/upload-product-image', { method: 'POST', body: fd });
+                        const result = await res.json();
+                        if (result.url) newUrls.push(result.url);
+                        else toast.error(result.error || 'Error al subir');
+                      } catch { toast.error('Error al subir imagen'); }
+                    }
+                    if (newUrls.length > 0) {
+                      const current: string[] = (() => { try { return JSON.parse(data.images); } catch { return []; } })();
+                      set('images', JSON.stringify([...current, ...newUrls]));
+                      toast.success(`${newUrls.length} imagen${newUrls.length > 1 ? 'es' : ''} subida${newUrls.length > 1 ? 's' : ''}`);
+                    }
+                    setUploadingImg(false);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
             </div>
+
+            {/* Galería actual */}
+            {(() => {
+              const imgs: string[] = (() => { try { return JSON.parse(data.images); } catch { return []; } })();
+              return imgs.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-3">
+                  {imgs.map((url, i) => (
+                    <div key={i} className="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-50" style={{ paddingBottom: '100%' }}>
+                      <div className="absolute inset-0">
+                        <Image src={url} alt={`img-${i}`} fill className="object-contain p-1" sizes="100px" />
+                      </div>
+                      {i === 0 && (
+                        <span className="absolute top-1 left-1 bg-[#e8850c] text-white text-[8px] font-bold px-1.5 py-0.5 rounded z-10">Principal</span>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                        {i > 0 && (
+                          <button
+                            type="button"
+                            title="Mover a principal"
+                            onClick={() => {
+                              const arr = [...imgs];
+                              arr.splice(i, 1);
+                              arr.unshift(url);
+                              set('images', JSON.stringify(arr));
+                            }}
+                            className="bg-white text-gray-700 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-[#e8850c] hover:text-white transition-colors"
+                          >⭐</button>
+                        )}
+                        <button
+                          type="button"
+                          title="Eliminar"
+                          onClick={() => {
+                            if (!confirm('¿Eliminar esta imagen?')) return;
+                            set('images', JSON.stringify(imgs.filter((_, idx) => idx !== i)));
+                          }}
+                          className="bg-white text-red-500 rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-500 hover:text-white transition-colors"
+                        >✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-xl mb-3">Sin imágenes — subí una arriba</p>
+              );
+            })()}
+
+            {/* URLs manuales */}
+            <details className="text-xs">
+              <summary className="text-gray-400 cursor-pointer hover:text-gray-600 select-none mb-1">+ Agregar URL manual</summary>
+              <textarea
+                value={(() => { try { return JSON.parse(data.images).join('\n'); } catch { return ''; } })()}
+                onChange={e => set('images', JSON.stringify(e.target.value.split('\n').filter(Boolean)))}
+                rows={3} className={`${inputClass} font-mono text-xs mt-1`} placeholder="https://ejemplo.com/imagen.jpg" />
+            </details>
           </div>
         </div>
 

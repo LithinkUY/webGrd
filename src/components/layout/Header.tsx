@@ -63,11 +63,13 @@ export default function Header() {
   const currency = useCurrency((s) => s.currency);
   const setCurrency = useCurrency((s) => s.setCurrency);
   const formatCurrency = useCurrency((s) => s.format);
+  const fetchRate = useCurrency((s) => s.fetchRate);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>(fallbackCategories);
   const [customMenuItems, setCustomMenuItems] = useState<CustomMenuItem[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    fetchRate(); // actualiza cotización USD/UYU si hace más de 1h
     const fetchMenu = async () => {
       try {
         const res = await fetch('/api/public/menu');
