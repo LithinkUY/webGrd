@@ -32,17 +32,28 @@ export async function POST(req: NextRequest) {
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
-    const filename = `logo.${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(uploadDir, filename), buffer);
 
-    const url = `/uploads/${filename}?t=${Date.now()}`;
+    let url: string;
+
+    // Intentar guardar en filesystem (servidor propio)
+    try {
+      const filename = `logo.${ext}`;
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!existsSync(uploadDir)) await mkdir(uploadDir, { recursive: true });
+      await writeFile(path.join(uploadDir, filename), buffer);
+      url = `/uploads/${filename}?t=${Date.now()}`;
+    } catch {
+      // Filesystem read-only (Vercel) → guardar en DB y servir via API
+      const dataUrl = `data:${file.type};base64,${buffer.toString('base64')}`;
+      const key = 'logo_image_file';
+      await prisma.siteSetting.upsert({
+        where: { key: `file_${key}` },
+        update: { value: dataUrl },
+        create: { key: `file_${key}`, value: dataUrl },
+      });
+      url = `/api/file/${key}`;
+    }
 
     // Guardar URL en settings
     await prisma.siteSetting.upsert({

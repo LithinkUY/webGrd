@@ -27,6 +27,7 @@ export default function AparienciaPage() {
   const [tab, setTab] = useState<'identidad' | 'footer' | 'pagos' | 'colores' | 'slider'>('identidad');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [uploadingSlide, setUploadingSlide] = useState<number | null>(null);
 
   // Identidad / Logo
   const [logoText, setLogoText] = useState('Ba Soluciones');
@@ -414,15 +415,17 @@ export default function AparienciaPage() {
                         placeholder="/banners/mi-banner.jpg o https://..."
                         className="flex-1 border border-gray-200 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#e8850c]"
                       />
-                      <label className="cursor-pointer flex items-center gap-1 bg-blue-50 border border-blue-200 hover:border-blue-400 text-blue-700 text-[11px] font-medium px-2 py-1 rounded transition-colors whitespace-nowrap">
-                        📁 Subir
+                      <label className={`cursor-pointer flex items-center gap-1 border text-[11px] font-medium px-2 py-1 rounded transition-colors whitespace-nowrap ${uploadingSlide === i ? 'bg-gray-100 border-gray-300 text-gray-400' : 'bg-blue-50 border-blue-200 hover:border-blue-400 text-blue-700'}`}>
+                        {uploadingSlide === i ? '⏳ Subiendo...' : '📁 Subir'}
                         <input
                           type="file"
                           accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
                           className="hidden"
+                          disabled={uploadingSlide !== null}
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
+                            setUploadingSlide(i);
                             const fd = new FormData();
                             fd.append('file', file);
                             try {
@@ -430,9 +433,10 @@ export default function AparienciaPage() {
                               const data = await res.json();
                               if (data.url) {
                                 setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, image: data.url } : s));
-                                toast.success('Imagen subida');
+                                toast.success('✅ Imagen subida — hacé clic en Guardar Slider');
                               } else { toast.error(data.error || 'Error al subir'); }
                             } catch { toast.error('Error al subir imagen'); }
+                            finally { setUploadingSlide(null); e.target.value = ''; }
                           }}
                         />
                       </label>
