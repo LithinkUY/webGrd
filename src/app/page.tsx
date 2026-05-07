@@ -19,7 +19,7 @@ export default function Home() {
         <div className="relative z-10">
           <CategoryGrid />
           {/* Spacer transparente para que se vea el banner detrás */}
-          <div className="h-[280px] md:h-[340px] lg:h-[400px]" />
+          <div className="h-[260px] md:h-[420px] lg:h-[540px]" />
         </div>
       </div>
 
